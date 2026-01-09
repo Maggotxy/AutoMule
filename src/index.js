@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const IdeaCapturer = require('./ideaCapturer/ideaCapturer');
-const IdeaGenerator = require('./ideaGenerator');
+const { IdeaGenerator } = require('./ideaGenerator');
 const TaskQueue = require('./taskQueue/taskQueue');
 const iFlowEngine = require('./iflowEngine/iflowEngine');
 const CodeRepository = require('./codeRepository/codeRepository');
