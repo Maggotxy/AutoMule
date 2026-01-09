@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>像素牛马展示</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header class="pixel-header">
+      <h1 class="pixel-title">🐮🐴 像素牛马展示</h1>
+      <p class="pixel-subtitle">致敬每一位努力工作的打工人</p>
+    </header>
+
+    <!-- 实时统计面板 -->
+    <section class="pixel-stats-panel">
+      <div class="pixel-stat-item">
+        <div class="pixel-stat-icon">⏱️</div>
+        <div class="pixel-stat-value" id="workTime">00:00:00</div>
+        <div class="pixel-stat-label">今日工时</div>
+      </div>
+      <div class="pixel-stat-item">
+        <div class="pixel-stat-icon">🐟</div>
+        <div class="pixel-stat-value" id="fishCount">0</div>
+        <div class="pixel-stat-label">摸鱼次数</div>
+      </div>
+      <div class="pixel-stat-item">
+        <div class="pixel-stat-icon">⭐</div>
+        <div class="pixel-stat-value" id="currentLevel">LV.1</div>
+        <div class="pixel-stat-label">当前等级</div>
+      </div>
+      <div class="pixel-stat-item">
+        <div class="pixel-stat-icon">💪</div>
+        <div class="pixel-stat-value" id="energy">100%</div>
+        <div class="pixel-stat-label">剩余精力</div>
+      </div>
+    </section>
+
+    <main class="pixel-main">
+      <section class="pixel-section">
+        <h2 class="pixel-section-title">关于牛马</h2>
+        <div class="pixel-card">
+          <div class="pixel-icon">🐮</div>
+          <h3>勤劳如牛</h3>
+          <p>默默耕耘，任劳任怨，用汗水浇灌梦想</p>
+        </div>
+        <div class="pixel-card">
+          <div class="pixel-icon">🐴</div>
+          <h3>奔腾如马</h3>
+          <p>勇往直前，永不言弃，用奋斗书写青春</p>
+        </div>
+      </section>
+
+      <section class="pixel-section">
+        <h2 class="pixel-section-title">牛马精神</h2>
+        <div class="pixel-list">
+          <div class="pixel-list-item">
+            <span class="pixel-bullet">▶</span>
+            <span>996 是福，加班是命</span>
+          </div>
+          <div class="pixel-list-item">
+            <span class="pixel-bullet">▶</span>
+            <span>摸鱼是艺术，摸得恰到好处</span>
+          </div>
+          <div class="pixel-list-item">
+            <span class="pixel-bullet">▶</span>
+            <span>工资到账，瞬间复活</span>
+          </div>
+          <div class="pixel-list-item">
+            <span class="pixel-bullet">▶</span>
+            <span>老板画饼，我吃饼</span>
+          </div>
+          <div class="pixel-list-item">
+            <span class="pixel-bullet">▶</span>
+            <span>只要干不死，就往死里干</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="pixel-section">
+        <h2 class="pixel-section-title">牛马语录</h2>
+        <div class="pixel-quote-box">
+          <p class="pixel-quote">"只要我不下班，老板就没法下班"</p>
+          <p class="pixel-quote">"工作让我快乐，快乐让我工作"</p>
+          <p class="pixel-quote">"钱多事少离家近，那是梦"</p>
+        </div>
+      </section>
+
+      <section class="pixel-section">
+        <h2 class="pixel-section-title">牛马等级</h2>
+        <div class="pixel-level">
+          <div class="pixel-level-item" data-level="1">
+            <span class="pixel-level-badge">LV.1</span>
+            <span class="pixel-level-name">菜鸟牛马</span>
+          </div>
+          <div class="pixel-level-item" data-level="2">
+            <span class="pixel-level-badge">LV.2</span>
+            <span class="pixel-level-name">熟练牛马</span>
+          </div>
+          <div class="pixel-level-item" data-level="3">
+            <span class="pixel-level-badge">LV.3</span>
+            <span class="pixel-level-name">资深牛马</span>
+          </div>
+          <div class="pixel-level-item" data-level="4">
+            <span class="pixel-level-badge">LV.MAX</span>
+            <span class="pixel-level-name">传说牛马</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 操作按钮区域 -->
+      <section class="pixel-section">
+        <h2 class="pixel-section-title">牛马行动</h2>
+        <div class="pixel-actions">
+          <button class="pixel-button pixel-btn-work" id="btnWork">
+            <span class="pixel-btn-icon">💼</span>
+            <span class="pixel-btn-text">开始工作</span>
+          </button>
+          <button class="pixel-button pixel-btn-fish" id="btnFish">
+            <span class="pixel-btn-icon">🐟</span>
+            <span class="pixel-btn-text">摸鱼一下</span>
+          </button>
+          <button class="pixel-button pixel-btn-rest" id="btnRest">
+            <span class="pixel-btn-icon">☕</span>
+            <span class="pixel-btn-text">休息片刻</span>
+          </button>
+          <button class="pixel-button pixel-btn-levelup" id="btnLevelUp">
+            <span class="pixel-btn-icon">⬆️</span>
+            <span class="pixel-btn-text">升级</span>
+          </button>
+        </div>
+        <div class="pixel-message-box" id="messageBox"></div>
+      </section>
+    </main>
+
+    <footer class="pixel-footer">
+      <p>© 2026 像素牛马展示 | 致敬每一位打工人</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

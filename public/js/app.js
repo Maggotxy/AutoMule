@@ -26,6 +26,15 @@ class ManusUI {
         this.stationStats = {}; // Placeholder for station statistics
         this.generatorStatus = {}; // Placeholder for generator status
 
+        // 想法灵感状态
+        this.ideaInspiration = {
+            ideas: [],
+            webCount: 0,
+            aiCount: 0,
+            cachedCount: 0,
+            lastFetchTime: 0
+        };
+
         this.refreshConversationTimer = null;
         this.refreshAppsTimer = null;
         this.elapsedTicker = null;
@@ -53,6 +62,10 @@ class ManusUI {
         this.refreshNiuMaStation();
         setInterval(() => this.refreshNiuMaStation(), 3000); // 每3秒刷新一次状态
 
+        // 启动想法刷新循环
+        this.refreshIdeas();
+        setInterval(() => this.refreshIdeas(), 5000); // 每5秒刷新一次想法
+
         // 全局暴露，供 index.html 按钮调用
         window.ui = this; // Expose ui instance globally
         window.newApp = () => this.createNewApp();
@@ -74,6 +87,9 @@ class ManusUI {
         window.toggleRun = () => this.toggleRun();
         window.openPreviewTab = () => this.openPreviewTab();
         window.setRightTab = (t) => this.setRightTab(t);
+
+        // 检查是否有从想法详情页面选中的想法
+        this.checkSelectedIdea();
     }
 
     formatElapsed(ms) {
@@ -242,11 +258,102 @@ class ManusUI {
         this.socket.on('taskStream', (payload) => {
             this.onTaskStream(payload);
         });
+
+        // 🐂 牛马迭代事件
+        this.socket.on('iterationStart', (p) => {
+            console.log('🐂 牛马迭代开始', p);
+            this.onTaskStream({
+                taskId: p.taskId,
+                type: 'status',
+                text: `🐂 牛马开始第 ${p.iteration} 轮迭代...`
+            });
+        });
+
+        this.socket.on('iterationComplete', (p) => {
+            console.log('🐂 牛马迭代完成', p);
+            this.scheduleRefreshApps();
+            this.scheduleRefreshConversation();
+        });
+
+        this.socket.on('niuMaStart', (p) => {
+            console.log('🐂 牛马启动', p);
+            this.scheduleRefreshApps();
+        });
+
+        this.socket.on('niuMaStop', (p) => {
+            console.log('🐂 牛马停止', p);
+            this.scheduleRefreshApps();
+        });
+
+        // 🔴 错误和熔断事件
+        this.socket.on('iterationError', (p) => {
+            console.warn('🐂 牛马迭代失败', p);
+            this.onTaskStream({
+                taskId: `error_${p.appId}`,
+                type: 'error',
+                text: `❌ 牛马 ${p.appId} 迭代失败: ${p.error}`
+            });
+            this.showToast(`牛马迭代失败: ${p.error}`, 'error');
+        });
+
+        this.socket.on('niuMaCircuitBreak', (p) => {
+            console.error('🐂 牛马熔断', p);
+            this.onTaskStream({
+                taskId: `circuit_${p.appId}`,
+                type: 'error',
+                text: `🔴 牛马 ${p.appId} 连续失败 ${p.consecutiveErrors} 次，已自动暂停`
+            });
+            this.showToast(`牛马已暂停 (连续失败${p.consecutiveErrors}次)`, 'warning');
+            this.scheduleRefreshApps();
+        });
     }
 
     setStatus(text) {
         const el = document.getElementById('systemStatusText');
         if (el) el.textContent = text;
+    }
+
+    /**
+     * 显示 Toast 通知
+     * @param {string} message - 消息内容
+     * @param {string} type - 类型: 'info' | 'success' | 'warning' | 'error'
+     */
+    showToast(message, type = 'info') {
+        // 创建或复用 toast 容器
+        let container = document.getElementById('toast-container');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toast-container';
+            container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';
+            document.body.appendChild(container);
+        }
+
+        const colors = {
+            info: '#3498db',
+            success: '#2ecc71',
+            warning: '#f39c12',
+            error: '#e74c3c'
+        };
+
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            background:${colors[type] || colors.info};
+            color:white;
+            padding:12px 20px;
+            border-radius:8px;
+            box-shadow:0 4px 12px rgba(0,0,0,0.3);
+            font-size:14px;
+            max-width:350px;
+            animation:slideIn 0.3s ease;
+        `;
+        toast.textContent = message;
+        container.appendChild(toast);
+
+        // 自动消失
+        setTimeout(() => {
+            toast.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
     }
 
     async refreshAll() {
@@ -319,7 +426,7 @@ class ManusUI {
         const badge = document.getElementById('generatorStatusBadge');
         const btn = document.getElementById('toggleGeneratorBtn');
         if (badge && btn) {
-            const isRunning = status.status === 'running';
+            const isRunning = status.enabled === true;
             badge.textContent = isRunning ? '运行中' : '停止';
             badge.style.background = isRunning ? 'rgba(46, 204, 113, 0.2)' : 'rgba(149, 165, 166, 0.3)';
             badge.style.color = isRunning ? '#2ecc71' : '#95a5a6';
@@ -370,31 +477,45 @@ class ManusUI {
             const ideaFile = app.ideaKey ? String(app.ideaKey).split(/[/\\\\]/).pop() : '';
 
             const isActive = this.activeApp && this.activeApp.id === app.id;
-            const niumaState = this.niurnaStates[app.id] || {};
-            const isAuto = niumaState.isAuto; // 是否正在自动搬砖
+            const niumaState = (this.niurnaStates || {})[app.id] || {};
+            // Fix: Backend returns 'enabled' and 'status', not 'isAuto'
+            const isAuto = niumaState.enabled === true;
+            const isWorking = niumaState.status === 'working';
+
+            // 🐮 Fun Element: Random Avatar or based on ID
+            const avatars = ['🐮', '🐴', '🦄', '🦓', '🐂', '🐃'];
+            const avatarIndex = app.id.length % avatars.length; // Stable random
+            const avatar = avatars[avatarIndex];
 
             const div = document.createElement('div');
-            div.className = `app-row ${isActive ? 'active' : ''} ${isAuto ? 'niuma-working' : ''}`;
+            // Add 'active' for selection, 'niuma-working' for animation
+            div.className = `app-row ${isActive ? 'active' : ''} ${isWorking ? 'niuma-working' : ''}`;
             div.onclick = () => this.selectApp(app.id);
 
+            // 🎨 Fun Element: Status Badge with Animation
             let statusBadge = '';
             if (isAuto) {
-                statusBadge = `<span class="badge" style="background:rgba(230, 126, 34, 0.2); color:#e67e22; font-size:10px;">搬砖中 ${niumaState.iterationCount || 0}</span>`;
+                const icon = isWorking ? '🔨' : '☕';
+                const text = isWorking ? '搬砖中' : '摸鱼中';
+                const animClass = isWorking ? 'pulse-fast' : 'pulse-slow';
+                statusBadge = `<span class="badge ${animClass}" style="background:rgba(230, 126, 34, 0.2); color:#e67e22; font-size:10px;">${icon} ${text} ${niumaState.iterationCount || 0}</span>`;
             }
 
-            // Render NiuMa controls
+            // Render NiuMa controls with fun emojis
             const niumaControls = `
                 <div class="niuma-controls" style="margin-top:6px; display:flex; gap:4px; align-items:center;">
-                    <button class="btn-xs ${isAuto ? 'btn-stop' : 'btn-start'}"
+                    <div style="font-size:14px; margin-right:4px;" title="我是你的专属牛马">${avatar}</div>
+                    <button class="btn-xs ${isAuto ? 'btn-stop' : 'btn-start'}" 
                         onclick="event.stopPropagation(); ui.toggleNiuMa('${app.id}', ${!isAuto})"
                         title="${isAuto ? '停止自动迭代' : '启动自动迭代'}">
-                        ${isAuto ? '☕ 摸鱼' : '🐂 搬砖'}
+                        ${isAuto ? '🛑 停工' : '🚀 开工'}
                     </button>
-                    <select class="select-xs" onclick="event.stopPropagation()" onchange="ui.setNiuMaFocus('${app.id}', this.value)" style="max-width: 60px;">
-                        <option value="balanced" ${niumaState.focusDimension === 'balanced' ? 'selected' : ''}>⚖️ 均衡</option>
-                        <option value="ui" ${niumaState.focusDimension === 'ui' ? 'selected' : ''}>🎨 颜值</option>
-                        <option value="logic" ${niumaState.focusDimension === 'logic' ? 'selected' : ''}>⚡ 效率</option>
-                        <option value="robustness" ${niumaState.focusDimension === 'robustness' ? 'selected' : ''}>🛡️ 稳得一匹</option>
+                    <select class="select-xs" onclick="event.stopPropagation()" onchange="ui.setNiuMaFocus('${app.id}', this.value)" style="max-width: 90px;">
+                        <option value="" ${!niumaState.focusDimension ? 'selected' : ''}>🎲 随机</option>
+                        <option value="ui" ${niumaState.focusDimension === 'ui' ? 'selected' : ''}>🎨 搞颜值</option>
+                        <option value="userEffect" ${niumaState.focusDimension === 'userEffect' ? 'selected' : ''}>✨ 搞效果</option>
+                        <option value="experience" ${niumaState.focusDimension === 'experience' ? 'selected' : ''}>🎮 搞体验</option>
+                        <option value="efficiency" ${niumaState.focusDimension === 'efficiency' ? 'selected' : ''}>⚡ 搞效率</option>
                     </select>
                 </div>
             `;
@@ -404,7 +525,7 @@ class ManusUI {
                     <span class="app-name">${this.escapeHtml(app.name || app.id)}</span>
                     <span class="app-time" style="font-size:10px; opacity:0.6;">${new Date(app.createdAt || app.updatedAt).toLocaleTimeString()}</span>
                 </div>
-                <div style="font-size:11px; color:#555; margin-top:2px; display:flex; align-items:center; gap:6px;">
+                <div style="font-size:11px; color:#555; margin-top:2px; display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
                     ${badge}
                     ${statusBadge}
                     <span class="badge"><i class="bi bi-tag"></i>${this.escapeHtml(app.type || 'default')}</span>
@@ -724,7 +845,7 @@ class ManusUI {
                     continue;
                 }
 
-                const task = related.find(t => (h.revision != null && t.revision === h.revision)) || null;
+                const task = related.find(t => (h.revision != null && t.revision == h.revision)) || null;
                 if (task) {
                     if (task.id) seenTaskIds.add(task.id);
                     if (task.status === 'processing') {
@@ -754,10 +875,28 @@ class ManusUI {
                 }
             }
 
+
+            // 记录已显示的内容摘要（前20个字符），用于内容去重
+            const seenContent = new Set();
+            messages.forEach(m => {
+                if (m.role === 'user' && m.text) {
+                    seenContent.add(m.text.trim().substring(0, 50));
+                }
+            });
+
             // 当任务还在进行、metadata.ideaHistory 尚未写回时，补齐本轮增量输入的气泡（从 tasks 渲染）。
             const extras = related
                 .filter(t => t && t.id && !seenTaskIds.has(t.id))
                 .filter(t => (t.revision == null) || !seenRevisions.has(t.revision))
+                .filter(t => {
+                    // 内容去重：如果内容完全一样，且该任务是第一轮迭代（revision 1），极有可能是重复显示
+                    const content = (t.idea?.content || '').trim();
+                    const snippet = content.substring(0, 50);
+                    if (content && seenContent.has(snippet) && t.revision == 1) {
+                        return false; // 跳过重复
+                    }
+                    return true;
+                })
                 .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
 
             for (const t of extras) {
@@ -1190,12 +1329,184 @@ class ManusUI {
             if (btn) btn.disabled = false;
         }
     }
+
+    /**
+     * 刷新想法列表
+     */
+    async refreshIdeas() {
+        try {
+            const res = await fetch('/api/ideas');
+            const data = await res.json();
+            if (data.success) {
+                this.ideaInspiration = {
+                    ideas: data.ideas || [],
+                    webCount: data.webCount || 0,
+                    aiCount: data.aiCount || 0,
+                    cachedCount: data.cachedCount || 0,
+                    lastFetchTime: data.lastFetchTime || 0
+                };
+                this.renderIdeas();
+            }
+        } catch (err) {
+            console.warn('刷新想法列表失败:', err);
+        }
+    }
+
+    /**
+     * 渲染想法列表
+     */
+    renderIdeas() {
+        const countBadge = document.getElementById('ideaCountBadge');
+        const webCount = document.getElementById('webIdeaCount');
+        const aiCount = document.getElementById('aiIdeaCount');
+        const cachedCount = document.getElementById('cachedIdeaCount');
+        const latestIdeaContent = document.getElementById('latestIdeaContent');
+
+        // 更新统计
+        if (countBadge) countBadge.textContent = this.ideaInspiration.ideas.length;
+        if (webCount) webCount.textContent = this.ideaInspiration.webCount;
+        if (aiCount) aiCount.textContent = this.ideaInspiration.aiCount;
+        if (cachedCount) cachedCount.textContent = this.ideaInspiration.cachedCount;
+
+        // 显示最新想法
+        if (latestIdeaContent) {
+            if (this.ideaInspiration.ideas.length > 0) {
+                const latestIdea = this.ideaInspiration.ideas[0];
+                const sourceIcon = latestIdea.source === 'web' ? '🌐' : latestIdea.source === 'ai' ? '🤖' : '💡';
+                const sourceText = latestIdea.source === 'web' ? '网络' : latestIdea.source === 'ai' ? 'AI' : '其他';
+                const timeAgo = this.formatElapsedFromIso(latestIdea.timestamp);
+
+                latestIdeaContent.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                        <span style="font-size: 11px; font-weight: 600; color: rgba(0,0,0,0.7);">
+                            ${sourceIcon} ${sourceText}
+                        </span>
+                        <span style="font-size: 10px; color: rgba(0,0,0,0.5);">
+                            ${timeAgo}
+                        </span>
+                    </div>
+                    <div style="font-size: 12px; color: rgba(0,0,0,0.8); line-height: 1.4;">
+                        ${this.escapeHtml(latestIdea.content)}
+                    </div>
+                    ${latestIdea.analysis ? `
+                        <div style="margin-top: 6px; padding: 6px; background: rgba(52, 152, 219, 0.08); border-radius: 6px; font-size: 10px; color: rgba(0,0,0,0.6);">
+                            <i class="bi bi-graph-up"></i> ${this.escapeHtml(latestIdea.analysis)}
+                        </div>
+                    ` : ''}
+                `;
+            } else {
+                latestIdeaContent.textContent = '暂无想法，启动赛博大脑开始生成';
+            }
+        }
+    }
+
+    /**
+     * 使用想法（填充到输入框）
+     */
+    useIdea(idea) {
+        const input = document.getElementById('chatInput');
+        if (input) {
+            input.value = idea.content || '';
+            input.dispatchEvent(new Event('input'));
+            input.focus();
+        }
+    }
+
+    /**
+     * 手动生成想法
+     */
+    /**
+     * 手动/批量生成想法
+     */
+    async manualGenerateIdea() {
+        const btn = document.getElementById('manualGenerateBtn');
+        const select = document.getElementById('batchCountSelect');
+        const count = select ? parseInt(select.value || '1', 10) : 1;
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> 正在挖掘...';
+        }
+
+        try {
+            this.showToast(`正在全网挖掘 ${count} 个真实痛点...`, 'info');
+
+            const res = await fetch('/api/ideas/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ count })
+            });
+            const data = await res.json();
+
+            if (data.success && data.results) {
+                const results = data.results;
+                const successCount = results.filter(r => r.success).length;
+
+                if (successCount > 0) {
+                    this.showToast(`成功挖掘 ${successCount} 个真实需求！`, 'success');
+                    // 刷新列表
+                    setTimeout(() => this.refreshIdeas(), 500);
+                } else {
+                    this.showToast('未能获取到有效想法，请稍后再试', 'warning');
+                }
+            } else {
+                this.showToast('生成请求失败: ' + (data.error || '未知错误'), 'error');
+            }
+        } catch (error) {
+            console.error('Create idea failed:', error);
+            this.showToast('请求出错: ' + error.message, 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-magic"></i> 批量生成';
+            }
+        }
+    }
+
+
+    /**
+     * 打开想法详情页面
+     */
+    openIdeaDetails() {
+        window.open('/idea-details.html', '_blank', 'width=1200,height=800');
+    }
+
+    /**
+     * 检查是否有从想法详情页面选中的想法
+     */
+    checkSelectedIdea() {
+        try {
+            const selectedIdea = localStorage.getItem('selectedIdea');
+            if (selectedIdea) {
+                const idea = JSON.parse(selectedIdea);
+                if (idea && idea.content) {
+                    const input = document.getElementById('chatInput');
+                    if (input) {
+                        input.value = idea.content;
+                        input.dispatchEvent(new Event('input'));
+                        input.focus();
+                    }
+                    // 清除 localStorage 中的选中想法
+                    localStorage.removeItem('selectedIdea');
+                }
+            }
+        } catch (error) {
+            console.warn('读取选中的想法失败:', error);
+        }
+    }
 }
 
+// Fix: Handle case where app.js is loaded dynamically after DOMContentLoaded
 let ui;
-document.addEventListener('DOMContentLoaded', () => {
-    ui = new ManusUI();
-});
+const initApp = () => {
+    if (!ui) ui = new ManusUI();
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+} else {
+    initApp();
+}
 
 
 // Global bindings
@@ -1222,6 +1533,8 @@ window.toggleRightPane = () => ui.toggleRightPane();
 window.toggleNiuMa = (appId, start) => ui.toggleNiuMa(appId, start);
 window.setNiuMaFocus = (appId, dimension) => ui.setNiuMaFocus(appId, dimension);
 window.toggleIdeaGenerator = () => ui.toggleIdeaGenerator();
+window.manualGenerateIdea = () => ui.manualGenerateIdea();
+window.openIdeaDetails = () => ui.openIdeaDetails();
 
 
 // 移除底部的重复定义，因为现在已经作为类方法存在，并且在 constructor 中绑定了。

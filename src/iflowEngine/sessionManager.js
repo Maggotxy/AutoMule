@@ -61,9 +61,9 @@ class IFlowSession {
 class SessionManager {
     constructor(config) {
         this.config = config;
-        this.maxSessions = config?.system?.maxConcurrentSessions || 3;
+        this.maxSessions = config?.system?.maxConcurrentSessions || 10;
         this.basePort = config?.iflow?.processStartPort || 8090;
-        this.portRange = config?.iflow?.portRange || 10;
+        this.portRange = config?.iflow?.portRange || 50;
 
         // 会话池：port -> IFlowSession
         this.sessions = new Map();
@@ -82,6 +82,37 @@ class SessionManager {
             basePort: this.basePort,
             portRange: this.portRange
         });
+
+        // 定期清理长时间闲置的会话
+        setInterval(() => this.cleanupIdleSessions(), 60 * 60 * 1000); // 1小时检查一次
+    }
+
+    /**
+     * 清理长时间闲置的会话 (> 1小时)
+     */
+    cleanupIdleSessions() {
+        const now = Date.now();
+        const IDLE_TIMEOUT = 60 * 60 * 1000;
+        let count = 0;
+
+        for (const [port, session] of this.sessions) {
+            if (session.status === 'idle' && session.lastUsedAt) {
+                const idleTime = now - session.lastUsedAt.getTime();
+                if (idleTime > IDLE_TIMEOUT) {
+                    logger.info('♻️ 回收长时间闲置的 iFlow 会话', { port, idleTime });
+                    try {
+                        if (session.process) session.process.kill();
+                    } catch (e) { }
+                    this.sessions.delete(port);
+                    this.usedPorts.delete(port);
+                    count++;
+                }
+            }
+        }
+
+        if (count > 0) {
+            logger.info('已回收闲置会话', { count, remaining: this.sessions.size });
+        }
     }
 
     /**
@@ -170,8 +201,8 @@ class SessionManager {
             this.handleProcessExit(port);
         });
 
-        // 等待端口就绪
-        const deadline = Date.now() + 15000;
+        // 等待端口就绪 (增加到 60s 以应对并发启动卡顿)
+        const deadline = Date.now() + 60000;
         while (Date.now() < deadline) {
             // eslint-disable-next-line no-await-in-loop
             if (await this.isPortReady(port, 500)) {
@@ -427,6 +458,42 @@ class SessionManager {
         this.sessions.clear();
         this.appToSession.clear();
         this.usedPorts.clear();
+    }
+
+    /**
+     * 强制终止所有会话（同步版本，用于进程退出时）
+     */
+    terminateAllSessions() {
+        logger.info('🧹 强制终止所有 iFlow 会话...');
+        let killed = 0;
+
+        // 拒绝所有等待请求
+        for (const request of this.waitQueue) {
+            try {
+                clearTimeout(request.timer);
+                request.reject(new Error('系统正在关闭'));
+            } catch (e) { }
+        }
+        this.waitQueue = [];
+
+        // 强制杀死所有会话进程
+        for (const session of this.sessions.values()) {
+            try {
+                if (session.process && !session.process.killed) {
+                    session.process.kill('SIGKILL'); // 强制杀死
+                    killed++;
+                    logger.debug('已终止 iFlow 会话进程', { port: session.port, pid: session.process.pid });
+                }
+            } catch (e) {
+                logger.warn('终止会话进程失败', { port: session.port, error: e.message });
+            }
+        }
+
+        this.sessions.clear();
+        this.appToSession.clear();
+        this.usedPorts.clear();
+
+        logger.info('✅ 所有 iFlow 会话已终止', { killed });
     }
 }
 

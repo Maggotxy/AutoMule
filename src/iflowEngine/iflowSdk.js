@@ -62,9 +62,10 @@ function shouldApproveToolCall(message, config) {
   return { approve: confirmationType === 'edit' };
 }
 
-function buildSdkOptions({ appDir, config }) {
+function buildSdkOptions({ appDir, config, wsUrl }) {
   const port = config.processStartPort || 8090;
-  let url = config.url || `ws://localhost:${port}/acp`;
+  // 🔧 修复：优先使用传入的 wsUrl（多会话模式），否则使用 config.url 或默认端口
+  let url = wsUrl || config.url || `ws://localhost:${port}/acp`;
 
   return {
     url,
@@ -138,6 +139,7 @@ module.exports = {
 
     // 传入 wsUrl 以支持多会话（如果提供了 wsUrl，则 options.url 会被覆盖）
     const options = buildSdkOptions({ appDir, config, wsUrl });
+    const files = listContextFiles(appDir);
 
     const chunks = [];
     const plans = [];

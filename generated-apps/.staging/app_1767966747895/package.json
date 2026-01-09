@@ -1,0 +1,12 @@
+{
+  "name": "random-movie-recommender",
+  "version": "1.0.0",
+  "description": "随机电影推荐器",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

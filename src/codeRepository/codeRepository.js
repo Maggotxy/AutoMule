@@ -73,7 +73,7 @@ ${result.success ? '✅ 成功' : '❌ 失败'}
 ${result.success ? `
 ## 生成的代码解决方案
 
-${result.output.stdout || '无输出'}
+${typeof result.output === 'string' ? result.output : (result.output?.stdout || result.output || '无输出')}
 ` : `
 ## 错误信息
 ${result.error || '未知错误'}
@@ -82,16 +82,16 @@ ${result.error || '未知错误'}
 ## 元数据
 \`\`\`json
 ${JSON.stringify({
-  taskId: task.id,
-  ideaId: idea.id,
-  source: idea.source,
-  priority: idea.priority,
-  timestamp: idea.timestamp,
-  createdAt: task.createdAt,
-  completedAt: task.completedAt,
-  attempts: task.attempts,
-  success: result.success
-}, null, 2)}
+      taskId: task.id,
+      ideaId: idea.id,
+      source: idea.source,
+      priority: idea.priority,
+      timestamp: idea.timestamp,
+      createdAt: task.createdAt,
+      completedAt: task.completedAt,
+      attempts: task.attempts,
+      success: result.success
+    }, null, 2)}
 \`\`\`
 
 ---

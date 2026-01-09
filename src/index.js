@@ -167,6 +167,53 @@ class ContinuousDevSystem {
     this.monitor.on('healthAlert', (alert) => {
       logger.warn('健康警报', { level: alert.level, failureRate: alert.failureRate });
     });
+
+    // 🐂 牛马工作站事件转发
+    const autoIterator = this.iflowEngine.autoIterator;
+    if (autoIterator) {
+      autoIterator.on('niuMaStart', (p) => {
+        logger.debug('🐂 牛马开始事件', { appId: p.appId });
+        this.broadcastToWeb('niuMaStart', p);
+      });
+
+      autoIterator.on('niuMaStop', (p) => {
+        logger.debug('🐂 牛马停止事件', { appId: p.appId });
+        this.broadcastToWeb('niuMaStop', p);
+      });
+
+      // 迭代开始时，推送任务更新给前端
+      autoIterator.on('iterationStart', (p) => {
+        logger.debug('🐂 牛马迭代开始', { appId: p.appId, taskId: p.taskId });
+        this.broadcastToWeb('iterationStart', p);
+
+        // 构造一个模拟的任务对象，让前端显示气泡
+        const fakeTask = {
+          id: p.taskId,
+          status: 'processing',
+          ideaKey: p.ideaKey,
+          createdAt: new Date().toISOString(),
+          idea: { content: `🐂 NiuMa 自动迭代 #${p.iteration}` },
+          revision: p.iteration,
+          isNiuMa: true
+        };
+        this.broadcastToWeb('taskUpdate', fakeTask);
+      });
+
+      autoIterator.on('iterationComplete', (p) => {
+        logger.debug('🐂 牛马迭代完成', { appId: p.appId, iteration: p.iteration });
+        this.broadcastToWeb('iterationComplete', p);
+      });
+
+      autoIterator.on('iterationError', (p) => {
+        logger.warn('🐂 牛马迭代失败', { appId: p.appId, error: p.error });
+        this.broadcastToWeb('iterationError', p);
+      });
+
+      autoIterator.on('niuMaCircuitBreak', (p) => {
+        logger.error('🐂 牛马熔断', { appId: p.appId, consecutiveErrors: p.consecutiveErrors });
+        this.broadcastToWeb('niuMaCircuitBreak', p);
+      });
+    }
   }
 
   readCodeFile(filePath) {
@@ -316,7 +363,7 @@ class ContinuousDevSystem {
       return;
     }
 
-    logger.info('正在停止系统...');
+    logger.info('🛑 正在停止系统（包括所有子进程）...');
 
     this.isRunning = false;
 
@@ -324,15 +371,40 @@ class ContinuousDevSystem {
       clearInterval(this.checkInterval);
     }
 
+    // 停止想法生成器
+    if (this.ideaGenerator && this.ideaGenerator.enabled) {
+      this.ideaGenerator.stop();
+    }
+
     this.ideaCapturer.stop();
     this.monitor.stop();
+
+    // 1. 停止所有自动迭代器（牛马）
+    if (this.iflowEngine && this.iflowEngine.autoIterator) {
+      logger.info('🐂 正在停止所有牛马...');
+      this.iflowEngine.autoIterator.stopAll();
+    }
+
+    // 2. 终止所有正在执行的任务
     this.iflowEngine.terminateAllTasks();
+
+    // 3. 停止所有已启动的生成应用
+    if (this.iflowEngine) {
+      logger.info('🔌 正在停止所有生成的应用...');
+      this.iflowEngine.stopAllApps();
+    }
+
+    // 4. 释放所有会话（杀死 iFlow CLI 进程）
+    if (this.iflowEngine && this.iflowEngine.sessionManager) {
+      logger.info('🧹 正在清理所有 iFlow 会话...');
+      this.iflowEngine.sessionManager.terminateAllSessions();
+    }
 
     if (this.webServer) {
       this.webServer.stop();
     }
 
-    logger.info('系统已停止');
+    logger.info('✅ 系统已完全停止，所有子进程已清理');
     this.displayStatus();
   }
 
@@ -406,19 +478,50 @@ if (require.main === module) {
     process.exit(1);
   });
 
+  // 正常退出信号
   process.on('SIGINT', () => {
-    logger.info('收到停止信号');
+    logger.info('收到停止信号 (SIGINT)');
     system.stop();
     system.generateReport();
     process.exit(0);
   });
 
   process.on('SIGTERM', () => {
-    logger.info('收到终止信号');
+    logger.info('收到终止信号 (SIGTERM)');
     system.stop();
     system.generateReport();
     process.exit(0);
   });
+
+  // 🚨 异常退出处理 - 确保子进程被清理
+  process.on('uncaughtException', (error) => {
+    logger.error('🚨 未捕获的异常！正在紧急清理子进程...', { error: error.message, stack: error.stack });
+    try {
+      system.stop();
+    } catch (e) {
+      logger.error('紧急清理失败', { error: e.message });
+    }
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    logger.error('🚨 未处理的 Promise 拒绝！', { reason: String(reason) });
+    // 不退出，但记录警告
+  });
+
+  process.on('beforeExit', (code) => {
+    logger.info('进程即将退出，执行最终清理', { exitCode: code });
+    try {
+      system.stop();
+    } catch (e) { }
+  });
+
+  // Windows 特定：处理控制台关闭事件
+  if (process.platform === 'win32') {
+    const readline = require('readline');
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.on('SIGINT', () => process.emit('SIGINT'));
+  }
 
   setInterval(() => {
     system.displayStatus();

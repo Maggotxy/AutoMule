@@ -232,50 +232,97 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
         }
 
-        /* 🐂 搬砖动画效果 */
+        .app-row:hover {
+            background: rgba(0, 0, 0, 0.02);
+            transform: translateY(-1px);
+            transition: all 0.2s ease;
+        }
+
+        /* 🐂 搬砖动画：更生动的呼吸效果 */
         @keyframes bricks-working {
             0% {
                 border-left-color: #3498db;
                 background: rgba(33, 150, 243, 0.1);
+                box-shadow: 0 0 0 rgba(33, 150, 243, 0);
             }
 
             50% {
                 border-left-color: #e67e22;
                 background: rgba(230, 126, 34, 0.15);
+                box-shadow: 0 4px 12px rgba(230, 126, 34, 0.2);
             }
 
             100% {
                 border-left-color: #3498db;
                 background: rgba(33, 150, 243, 0.1);
+                box-shadow: 0 0 0 rgba(33, 150, 243, 0);
             }
         }
 
         .app-row.niuma-working {
             animation: bricks-working 2s infinite ease-in-out;
+            position: relative;
+            overflow: hidden;
         }
 
-        .app-row.niuma-working::after {
-            content: '🐂';
+        /* 抽象背景流光 */
+        .app-row.niuma-working::before {
+            content: '';
             position: absolute;
-            right: 8px;
-            top: 8px;
-            font-size: 10px;
-            opacity: 0.5;
-            animation: bounce 1s infinite alternate;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            animation: shimmer 3s infinite;
         }
 
-        @keyframes bounce {
-            from {
-                transform: translateY(0);
-            }
-
-            to {
-                transform: translateY(-2px);
+        @keyframes shimmer {
+            100% {
+                left: 100%;
             }
         }
 
-        .app-row:hover {
-            background: rgba(0, 0, 0, 0.02);
+        @keyframes pulse-fast {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .pulse-fast {
+            animation: pulse-fast 1s infinite;
+        }
+
+        @keyframes pulse-slow {
+            0% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+
+            50% {
+                transform: scale(1.02);
+                opacity: 0.4;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+        }
+
+        .pulse-slow {
+            animation: pulse-slow 3s infinite;
         }
 
         .app-row .name {
@@ -727,25 +774,31 @@
                     <div class="text-center py-5 text-muted">加载中...</div>
                 </div>
 
-                <!-- 牛马工作站控制面板 -->
+                <!-- 赛博牛马工作站与想法灵感合并模块 -->
                 <div id="niuMaStationPanel" class="auto-iterate-panel"
-                    style="margin-top: 16px; padding: 12px; border-radius: 12px; background: rgba(241, 196, 15, 0.08); border: 1px solid rgba(241, 196, 15, 0.2);">
+                    style="margin-top: 16px; padding: 12px; border-radius: 12px; background: linear-gradient(135deg, rgba(241, 196, 15, 0.08) 0%, rgba(52, 152, 219, 0.08) 100%); border: 1px solid rgba(0, 0, 0, 0.1);">
 
-                    <!-- 工作站统计 -->
+                    <!-- 工作站标题和统计 -->
                     <div
-                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                        <span style="font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="font-weight: 700; display: flex; align-items: center; gap: 6px; font-size: 13px;">
                             <span style="font-size: 1.1em;">🏭</span> 赛博牛马工作站
                         </span>
-                        <div id="stationStats" style="font-size: 11px; color: rgba(0,0,0,0.6);">
-                            🔥 <strong id="workingCount">0</strong> |
-                            📊 <strong id="totalIterations">0</strong>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <div id="stationStats" style="font-size: 11px; color: rgba(0,0,0,0.6);">
+                                🔥 <strong id="workingCount">0</strong> |
+                                📊 <strong id="totalIterations">0</strong>
+                            </div>
+                            <button class="btn-icon" onclick="openIdeaDetails()" title="查看想法详情"
+                                style="width: 28px; height: 28px; font-size: 12px; background: rgba(52, 152, 219, 0.15);">
+                                <i class="bi bi-lightbulb"></i>
+                            </button>
                         </div>
                     </div>
 
                     <!-- 想法生成器控制 -->
                     <div
-                        style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: rgba(155, 89, 182, 0.1); border-radius: 8px;">
+                        style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: rgba(155, 89, 182, 0.1); border-radius: 8px; margin-bottom: 10px;">
                         <span style="font-size: 12px; display: flex; align-items: center; gap: 4px;">
                             🧠 赛博大脑 (自动想点子)
                             <span id="generatorStatusBadge"
@@ -754,6 +807,51 @@
                         <button id="toggleGeneratorBtn" class="btn-icon" onclick="toggleIdeaGenerator()"
                             style="font-size: 11px; padding: 3px 8px; background: rgba(155, 89, 182, 0.2);">
                             启动
+                        </button>
+                    </div>
+
+                    <!-- 想法来源统计 -->
+                    <div id="ideaSourceStats" style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+                        <span class="badge" style="font-size: 10px; background: rgba(52, 152, 219, 0.15);">
+                            🌐 网络: <strong id="webIdeaCount">0</strong>
+                        </span>
+                        <span class="badge" style="font-size: 10px; background: rgba(155, 89, 182, 0.15);">
+                            🤖 AI: <strong id="aiIdeaCount">0</strong>
+                        </span>
+                        <span class="badge" style="font-size: 10px; background: rgba(46, 204, 113, 0.15);">
+                            💾 缓存: <strong id="cachedIdeaCount">0</strong>
+                        </span>
+                    </div>
+
+                    <!-- 最新想法展示 -->
+                    <div id="latestIdeaContainer"
+                        style="padding: 10px; background: rgba(255,255,255,0.7); border-radius: 8px; border: 1px solid rgba(0,0,0,0.06); margin-bottom: 10px;">
+                        <div
+                            style="font-size: 11px; color: rgba(0,0,0,0.5); margin-bottom: 4px; display: flex; align-items: center; gap: 4px;">
+                            <i class="bi bi-lightning"></i> 最新想法
+                        </div>
+                        <div id="latestIdeaContent" style="font-size: 12px; color: rgba(0,0,0,0.8); line-height: 1.4;">
+                            暂无想法，启动赛博大脑开始生成
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div style="display: flex; gap: 8px;">
+                        <div style="flex: 1; display: flex; gap: 4px;">
+                            <select id="batchCountSelect" class="select-xs"
+                                style="width: 45px; background: rgba(52, 152, 219, 0.05); border-color: rgba(52, 152, 219, 0.3);">
+                                <option value="1">1个</option>
+                                <option value="3" selected>3个</option>
+                                <option value="5">5个</option>
+                            </select>
+                            <button id="manualGenerateBtn" class="btn-icon" onclick="manualGenerateIdea()"
+                                style="flex: 1; font-size: 12px; padding: 8px; background: rgba(52, 152, 219, 0.15); border: 1px solid rgba(52, 152, 219, 0.3);">
+                                <i class="bi bi-magic"></i> 批量生成
+                            </button>
+                        </div>
+                        <button class="btn-icon" onclick="openIdeaDetails()"
+                            style="flex: 1; font-size: 12px; padding: 8px; background: rgba(241, 196, 15, 0.15); border: 1px solid rgba(241, 196, 15, 0.3);">
+                            <i class="bi bi-list-ul"></i> 查看全部
                         </button>
                     </div>
 
@@ -827,7 +925,12 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="/js/app.js"></script>
+    <script>
+        // Force reload of app.js with timestamp to bypass cache
+        const script = document.createElement('script');
+        script.src = `/js/app.js?v=${Date.now()}`;
+        document.body.appendChild(script);
+    </script>
 </body>
 
 </html>

@@ -1,0 +1,257 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f5f5f5;
+    --bg-tertiary: #e0e0e0;
+    --text-primary: #1a1a1a;
+    --text-secondary: #666666;
+    --border-color: #333333;
+    --accent: #4a4a4a;
+    --shadow: rgba(0, 0, 0, 0.1);
+}
+
+body {
+    font-family: 'Courier New', monospace;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Pixel Border Effect */
+.pixel-border {
+    border: 4px solid var(--border-color);
+    box-shadow: 
+        4px 4px 0 var(--border-color),
+        8px 8px 0 var(--shadow);
+    background: var(--bg-primary);
+    transition: all 0.2s ease;
+}
+
+.pixel-border:hover {
+    box-shadow: 
+        6px 6px 0 var(--border-color),
+        12px 12px 0 var(--shadow);
+    transform: translate(-2px, -2px);
+}
+
+/* Header */
+header {
+    background: var(--bg-primary);
+    padding: 30px 0;
+    margin-bottom: 40px;
+    border-bottom: 4px solid var(--border-color);
+}
+
+.pixel-title {
+    font-size: 32px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.pixel-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    letter-spacing: 4px;
+}
+
+/* Hero Section */
+.hero {
+    padding: 60px 40px;
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.hero h2 {
+    font-size: 28px;
+    margin: 20px 0 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.hero p {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.pixel-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+/* Features */
+.features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+.feature-card {
+    padding: 30px;
+    text-align: center;
+}
+
+.feature-card h3 {
+    font-size: 18px;
+    margin: 15px 0 10px;
+    text-transform: uppercase;
+}
+
+.feature-card p {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* Food Grid */
+.food-grid {
+    margin-bottom: 60px;
+}
+
+.section-title {
+    font-size: 22px;
+    padding: 15px 20px;
+    margin-bottom: 30px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.food-items {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 25px;
+}
+
+.food-item {
+    padding: 25px;
+    text-align: center;
+    background: var(--bg-primary);
+}
+
+.food-emoji {
+    font-size: 40px;
+    margin-bottom: 15px;
+}
+
+.food-item h4 {
+    font-size: 16px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+}
+
+.price {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-primary);
+}
+
+/* CTA Section */
+.cta {
+    padding: 50px 40px;
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.cta h2 {
+    font-size: 24px;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+}
+
+.cta p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+}
+
+.pixel-button {
+    background: var(--text-primary);
+    color: var(--bg-primary);
+    border: 4px solid var(--border-color);
+    padding: 15px 40px;
+    font-family: 'Courier New', monospace;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    transition: all 0.2s ease;
+    box-shadow: 
+        4px 4px 0 var(--border-color),
+        8px 8px 0 var(--shadow);
+}
+
+.pixel-button:hover {
+    background: var(--border-color);
+    box-shadow: 
+        6px 6px 0 var(--border-color),
+        12px 12px 0 var(--shadow);
+    transform: translate(-2px, -2px);
+}
+
+.pixel-button:active {
+    transform: translate(2px, 2px);
+    box-shadow: 
+        2px 2px 0 var(--border-color),
+        4px 4px 0 var(--shadow);
+}
+
+/* Footer */
+footer {
+    background: var(--bg-primary);
+    padding: 30px 0;
+    text-align: center;
+    border-top: 4px solid var(--border-color);
+}
+
+footer p {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .pixel-title {
+        font-size: 24px;
+    }
+    
+    .hero {
+        padding: 40px 20px;
+    }
+    
+    .hero h2 {
+        font-size: 22px;
+    }
+    
+    .features {
+        grid-template-columns: 1fr;
+    }
+    
+    .food-items {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .food-items {
+        grid-template-columns: 1fr;
+    }
+    
+    .pixel-button {
+        width: 100%;
+    }
+}

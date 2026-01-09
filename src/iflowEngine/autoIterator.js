@@ -13,6 +13,8 @@
  */
 
 const EventEmitter = require('events');
+const fs = require('fs');
+const path = require('path');
 const logger = require('../utils/logger');
 
 /**
@@ -35,9 +37,9 @@ class NiuMaState {
         this.history = []; // 迭代历史
         this.createdAt = new Date();
         this.totalWorkTimeMs = 0; // 累计干活时间
-        this.totalWorkTimeMs = 0; // 累计干活时间
         this.lastWorkStartAt = null;
         this.currentTaskId = null; // 当前正在进行的任务ID
+        this.consecutiveErrors = 0; // 连续错误次数
     }
 
     /**
@@ -171,6 +173,99 @@ class AutoIterator extends EventEmitter {
                 }
             });
         }
+
+        // 状态持久化文件
+        this.stateFile = path.join(__dirname, '../../logs/niuma_states.json');
+
+        // 加载已保存的状态
+        this.loadStates();
+
+        // 启动僵尸进程监控（每分运行）
+        setInterval(() => this.checkZombies(), 60000);
+    }
+
+    /**
+     * 监控并重置卡死的牛马（超过15分钟未完成）
+     */
+    checkZombies() {
+        const now = Date.now();
+        const TIMEOUT_MS = 15 * 60 * 1000;
+
+        for (const state of this.states.values()) {
+            if (state.status === 'working' && state.lastWorkStartAt) {
+                const duration = now - state.lastWorkStartAt.getTime();
+                if (duration > TIMEOUT_MS) {
+                    logger.warn('🐂 发现僵尸牛马，强制重置', { appId: state.appId, duration });
+
+                    // 尝试终止任务
+                    if (state.currentTaskId && this.iflowEngine) {
+                        try { this.iflowEngine.terminateTask(state.currentTaskId); } catch (e) { }
+                    }
+
+                    state.status = 'resting';
+                    state.currentTaskId = null;
+                    state.lastWorkStartAt = null;
+                    state.consecutiveErrors = (state.consecutiveErrors || 0) + 1;
+
+                    // 立即保存状态并重新调度
+                    this.saveStates();
+                    this.scheduleNextIteration(state.appId);
+                }
+            }
+        }
+    }
+
+    /**
+     * 保存状态到磁盘
+     */
+    saveStates() {
+        try {
+            const data = {};
+            for (const [appId, state] of this.states) {
+                // 只保存必要配置和状态
+                data[appId] = {
+                    enabled: state.enabled,
+                    iterationCount: state.iterationCount,
+                    focusDimension: state.focusDimension,
+                    enabledDimensions: [...state.enabledDimensions],
+                    totalWorkTimeMs: state.totalWorkTimeMs,
+                    history: state.history,
+                    consecutiveErrors: state.consecutiveErrors
+                };
+            }
+            fs.writeFileSync(this.stateFile, JSON.stringify(data, null, 2));
+        } catch (error) {
+            logger.warn('保存牛马状态失败', { error: error.message });
+        }
+    }
+
+    /**
+     * 加载状态
+     */
+    loadStates() {
+        try {
+            if (!fs.existsSync(this.stateFile)) return;
+            const data = JSON.parse(fs.readFileSync(this.stateFile, 'utf-8'));
+
+            for (const [appId, saved] of Object.entries(data)) {
+                const state = this.getOrCreateState(appId);
+                state.enabled = saved.enabled || false;
+                state.iterationCount = saved.iterationCount || 0;
+                state.focusDimension = saved.focusDimension || null;
+                if (saved.enabledDimensions) state.enabledDimensions = new Set(saved.enabledDimensions);
+                state.totalWorkTimeMs = saved.totalWorkTimeMs || 0;
+                state.history = saved.history || [];
+                state.consecutiveErrors = saved.consecutiveErrors || 0;
+
+                // 如果上次是 enabled，自动恢复运行
+                if (state.enabled) {
+                    logger.info('🐂 恢复牛马运行状态', { appId });
+                    this.scheduleNextIteration(appId);
+                }
+            }
+        } catch (error) {
+            logger.warn('加载牛马状态失败', { error: error.message });
+        }
     }
 
     /**
@@ -230,6 +325,7 @@ class AutoIterator extends EventEmitter {
 
         // 开始迭代循环
         this.scheduleNextIteration(appId);
+        this.saveStates(); // 保存状态
 
         return { success: true, state: state.getSummary() };
     }
@@ -264,6 +360,7 @@ class AutoIterator extends EventEmitter {
 
         logger.info('🐂 牛马休息了', { appId, iterationCount: state.iterationCount });
         this.emit('niuMaStop', { appId, state: state.getSummary() });
+        this.saveStates(); // 保存状态
 
         return { success: true, state: state.getSummary() };
     }
@@ -277,6 +374,7 @@ class AutoIterator extends EventEmitter {
 
         logger.info('🐂 牛马重点关注维度已更新', { appId, dimension });
         this.emit('focusChange', { appId, dimension, state: state.getSummary() });
+        this.saveStates();
 
         return { success: true, state: state.getSummary() };
     }
@@ -308,10 +406,35 @@ class AutoIterator extends EventEmitter {
             return;
         }
 
-        // 计算下次迭代时间
-        const delay = state.iterationCount === 0
+        // 计算下次迭代时间 (含指数退避)
+        let delay = state.iterationCount === 0
             ? 2000 // 首次快速启动
-            : state.restAfterIterationMs; // 干完活休息一下
+            : state.restAfterIterationMs;
+
+        // 🔌 熔断机制：连续失败 5 次以上，自动暂停
+        if (state.consecutiveErrors >= 5) {
+            state.status = 'paused';
+            state.enabled = false;
+            logger.error('🐂 牛马连续失败过多，已自动暂停', {
+                appId,
+                consecutiveErrors: state.consecutiveErrors,
+                hint: '请检查应用状态后手动重启牛马'
+            });
+            this.emit('niuMaCircuitBreak', {
+                appId,
+                consecutiveErrors: state.consecutiveErrors,
+                state: state.getSummary()
+            });
+            this.saveStates();
+            return;
+        }
+
+        // 如果连续出错，增加等待时间 (30s -> 60s -> 2m -> 5m -> 15m)
+        if (state.consecutiveErrors > 0) {
+            const backoff = Math.min(Math.pow(2, state.consecutiveErrors) * 30000, 15 * 60 * 1000);
+            delay = Math.max(delay, backoff);
+            logger.warn('🐂 牛马连续出错，正在冷却', { appId, consecutiveErrors: state.consecutiveErrors, delayMs: delay });
+        }
 
         state.status = state.iterationCount === 0 ? 'working' : 'resting';
 
@@ -331,7 +454,7 @@ class AutoIterator extends EventEmitter {
 
         try {
             state.startWork();
-            this.emit('iterationStart', { appId, iteration: state.iterationCount + 1 });
+            // iterationStart 事件已移至 taskId 生成后发出，包含完整信息
 
             // 构建六维度评估提示词
             const prompt = this.buildIteratePrompt(appId, state);
@@ -364,6 +487,14 @@ class AutoIterator extends EventEmitter {
             const taskId = `niuma_${appId}_${Date.now()}`;
             state.currentTaskId = taskId;
 
+            this.emit('iterationStart', {
+                appId,
+                iteration: state.iterationCount + 1,
+                taskId,
+                ideaKey: app.ideaKey,
+                prompt
+            });
+
             logger.info('🐂 [牛马迭代] 调用 iFlow', { appId, ideaKey: app.ideaKey, revision: idea.revision, taskId });
 
             const result = await this.iflowEngine.calliFlow(idea, taskId);
@@ -371,6 +502,8 @@ class AutoIterator extends EventEmitter {
             state.currentTaskId = null;
 
             state.recordIteration({ success: true, summary: '干完一轮活' });
+            state.consecutiveErrors = 0; // 重置错误计数
+            this.saveStates(); // 保存进度
             state.startRest();
 
             logger.info('🐂 牛马干完一轮活，休息一下', {
@@ -391,8 +524,10 @@ class AutoIterator extends EventEmitter {
 
         } catch (error) {
             state.currentTaskId = null; // 清除 ID
+            state.consecutiveErrors++; // 增加错误计数
             state.recordIteration({ success: false, summary: error.message });
             state.startRest();
+            this.saveStates(); // 保存错误状态
 
             logger.error('🐂 牛马干活出错了，休息后重试', { appId, error: error.message });
             this.emit('iterationError', { appId, error: error.message, state: state.getSummary() });
@@ -499,13 +634,38 @@ ${focusNote}
      * 关闭工作站（所有牛马下班）
      */
     shutdown() {
+        this.stopAll();
+    }
+
+    /**
+     * 停止所有牛马（包括终止正在进行的任务）
+     */
+    stopAll() {
+        logger.info('🐂 正在停止所有牛马...');
+
         for (const [appId, state] of this.states) {
+            // 清除定时器
             if (state.timer) {
                 clearTimeout(state.timer);
+                state.timer = null;
             }
+
+            // 尝试终止当前任务
+            if (state.currentTaskId && this.iflowEngine) {
+                try {
+                    this.iflowEngine.terminateTask(state.currentTaskId);
+                    logger.debug('已终止牛马任务', { appId, taskId: state.currentTaskId });
+                } catch (e) {
+                    logger.warn('终止牛马任务失败', { appId, error: e.message });
+                }
+            }
+
             state.enabled = false;
             state.status = 'paused';
+            state.currentTaskId = null;
         }
+
+        this.saveStates();
         logger.info('🐂 牛马工作站已关闭，所有牛马下班了');
     }
 }

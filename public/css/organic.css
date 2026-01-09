@@ -1475,18 +1475,176 @@ h6 { font-size: 1rem; }
   .apps-list {
     grid-template-columns: 1fr;
   }
-  
+
   .apps-header {
     flex-direction: column;
     align-items: flex-start;
     gap: var(--spacing-md);
   }
-  
+
   .batch-actions {
     width: 100%;
   }
-  
+
   .batch-actions .btn {
     flex: 1;
   }
+}
+
+/* ==================== 22. 想法展示区域 ==================== */
+.idea-item {
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.idea-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--primary);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.idea-item:hover {
+  background: rgba(52, 152, 219, 0.08);
+  border-color: rgba(52, 152, 219, 0.3);
+  transform: translateX(2px);
+}
+
+.idea-item:hover::before {
+  opacity: 1;
+}
+
+.idea-item.source-web::before {
+  background: #3498db;
+}
+
+.idea-item.source-ai::before {
+  background: #9b59b6;
+}
+
+.idea-item.source-cached::before {
+  background: #2ecc71;
+}
+
+.idea-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.idea-source {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.idea-time {
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.idea-content {
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.8);
+  line-height: 1.4;
+  margin-bottom: 6px;
+}
+
+.idea-analysis {
+  margin-top: 6px;
+  padding: 6px;
+  background: rgba(52, 152, 219, 0.08);
+  border-radius: 6px;
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.idea-analysis i {
+  margin-top: 1px;
+}
+
+.idea-empty {
+  text-align: center;
+  padding: 20px;
+  color: rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+}
+
+.idea-empty i {
+  font-size: 2em;
+  opacity: 0.3;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.idea-empty div {
+  margin-bottom: 4px;
+}
+
+.idea-empty .hint {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+/* 想法来源徽章 */
+.idea-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.idea-source-badge.web {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+}
+
+.idea-source-badge.ai {
+  background: rgba(155, 89, 182, 0.15);
+  color: #9b59b6;
+}
+
+.idea-source-badge.cached {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+}
+
+/* 想法列表滚动条 */
+#ideaList::-webkit-scrollbar {
+  width: 6px;
+}
+
+#ideaList::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 3px;
+}
+
+#ideaList::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+#ideaList::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }

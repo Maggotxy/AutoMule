@@ -566,7 +566,7 @@ class iFlowEngine extends EventEmitter {
 
   async calliFlow(idea, taskId) {
     return new Promise((resolve, reject) => {
-      // const outputFile = path.join(this.outputDirectory, `${taskId}_result.md`); // Removed outputFile
+      const outputFile = path.join(this.outputDirectory, `${taskId}_result.md`);
 
       logger.info(`开始生成代码解决方案（iFlow CLI）`, { taskId, idea: idea.content });
 
@@ -886,7 +886,7 @@ class iFlowEngine extends EventEmitter {
     ].join('\n');
   }
 
-  
+
 
   getDarkModeSolution() {
     return `# 暗黑模式支持方案

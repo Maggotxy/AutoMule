@@ -70,10 +70,31 @@
     "intervalMs": 300000,
     "maxIdeasPerDay": 10,
     "sources": {
-      "templates": true,
-      "ai": false,
-      "external": false
-    }
+      "templates": false,
+      "ai": true,
+      "external": true,
+      "webSources": {
+        "hackerNews": {
+          "enabled": true,
+          "url": "https://news.ycombinator.com/rss",
+          "dataType": "rss",
+          "description": "Hacker News 技术热点"
+        },
+        "redditWebDev": {
+          "enabled": true,
+          "url": "https://www.reddit.com/r/webdev/top/.json?t=day",
+          "dataType": "json",
+          "description": "Reddit WebDev 每日精选"
+        },
+        "v2ex": {
+          "enabled": true,
+          "url": "https://www.v2ex.com/index.xml",
+          "dataType": "rss",
+          "description": "V2EX 极客讨论"
+        }
+      }
+    },
+    "batchSize": 3
   },
   "autoIterate": {
     "enabled": true,

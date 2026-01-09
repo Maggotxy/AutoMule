@@ -20,7 +20,16 @@ class WebServer {
 
     setupMiddleware() {
         this.app.use(express.json());
-        this.app.use(express.static(path.join(__dirname, '../public')));
+        // 禁用静态文件缓存，确保前端每次加载最新 JS
+        this.app.use(express.static(path.join(__dirname, '../public'), {
+            etag: false,
+            lastModified: false,
+            setHeaders: (res, path) => {
+                res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+                res.setHeader('Pragma', 'no-cache');
+                res.setHeader('Expires', '0');
+            }
+        }));
     }
 
     setupRoutes() {
@@ -245,6 +254,27 @@ class WebServer {
             });
         });
 
+        // 想法生成 API
+        this.app.post('/api/ideas/generate', async (req, res) => {
+            try {
+                const count = parseInt(req.body.count || '1', 10);
+                const limit = Math.min(count, 5); // 限制最大并发 5 个
+
+                logger.info(`收到批量生成想法请求`, { count: limit });
+
+                const results = [];
+                // 暂时循环调用单次生成，稍后在 ideaGenerator 中实现真正的批量
+                for (let i = 0; i < limit; i++) {
+                    const result = await this.system.ideaGenerator.manualGenerate();
+                    results.push(result);
+                }
+
+                res.json({ success: true, results });
+            } catch (error) {
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
         // 应用管理 API
         this.app.get('/api/apps', (req, res) => {
             try {
@@ -261,6 +291,17 @@ class WebServer {
                 const { appId } = req.params;
                 const depth = Math.min(parseInt(req.query.depth || '2', 10) || 2, 6);
                 const ignore = new Set(['node_modules', '.git', '.staging']);
+
+                // 处理 pending 应用（还没有实际目录）
+                if (appId.startsWith('pending_')) {
+                    return res.json({
+                        success: true,
+                        appId,
+                        root: null,
+                        tree: { name: appId, path: '.', type: 'dir', children: [], pending: true },
+                        message: '应用正在生成中...'
+                    });
+                }
 
                 const appDir = path.join(__dirname, '../generated-apps', appId);
                 if (!fs.existsSync(appDir) || !fs.statSync(appDir).isDirectory()) {
@@ -639,6 +680,63 @@ class WebServer {
                 }
                 const result = await generator.manualGenerate();
                 res.json(result);
+            } catch (error) {
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        // 获取想法列表
+        this.app.get('/api/ideas', (req, res) => {
+            try {
+                const generator = this.system.ideaGenerator;
+                if (!generator) {
+                    return res.json({ success: true, ideas: [], webCount: 0, aiCount: 0, cachedCount: 0 });
+                }
+
+                // 从想法生成器获取缓存的想法
+                const cachedIdeas = generator.cachedIdeas || [];
+                const usedIdeas = generator.usedIdeas || new Set();
+
+                // 构建想法列表
+                const ideas = [];
+
+                // 添加缓存的想法（网络获取的）
+                cachedIdeas.forEach((content, index) => {
+                    if (!usedIdeas.has(content)) {
+                        ideas.push({
+                            content,
+                            source: 'web',
+                            timestamp: new Date(generator.lastWebFetchTime || Date.now()).toISOString(),
+                            analysis: `来自网络资源，排名第 ${index + 1}`
+                        });
+                    }
+                });
+
+                // 添加已使用的想法（用于历史记录）
+                usedIdeas.forEach((content) => {
+                    if (!ideas.find(i => i.content === content)) {
+                        ideas.push({
+                            content,
+                            source: 'cached',
+                            timestamp: new Date().toISOString(),
+                            analysis: '已使用的想法'
+                        });
+                    }
+                });
+
+                // 统计
+                const webCount = ideas.filter(i => i.source === 'web').length;
+                const aiCount = 0; // 当前实现中 AI 生成的想法会立即使用，不会缓存
+                const cachedCount = ideas.filter(i => i.source === 'cached').length;
+
+                res.json({
+                    success: true,
+                    ideas: ideas.slice(0, 20), // 只返回最近 20 个
+                    webCount,
+                    aiCount,
+                    cachedCount,
+                    lastFetchTime: generator.lastWebFetchTime || 0
+                });
             } catch (error) {
                 res.status(500).json({ success: false, error: error.message });
             }
