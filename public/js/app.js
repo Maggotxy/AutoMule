@@ -1107,18 +1107,38 @@ class ManusUI {
         return div.innerHTML;
     }
     async toggleNiuMa(appId, start) {
+        // Find the button to give immediate feedback
+        const btn = document.querySelector(`.app-row[onclick*="${appId}"] .btn-xs`) ||
+            // Fallback search strategy if the above selector is too specific or brittle
+            Array.from(document.querySelectorAll('.app-row')).find(r => r.textContent.includes(appId))?.querySelector('.btn-xs');
+
+        const originalText = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+        }
+
         try {
             const action = start ? 'start' : 'stop';
             const res = await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate/${action}`, { method: 'POST' });
             const data = await res.json();
             if (data.success) {
-                this.refreshNiuMaStation(); // 触发刷新
+                // Wait a moment for backend state to propagate, then refresh
+                setTimeout(() => this.refreshNiuMaStation(), 500);
             } else {
                 alert('操作失败: ' + (data.error || '未知错误'));
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
             }
         } catch (e) {
             console.warn(e);
             alert('网络错误，请检查控制台');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         }
     }
 
@@ -1136,19 +1156,38 @@ class ManusUI {
     }
 
     async toggleIdeaGenerator() {
+        const btn = document.getElementById('toggleGeneratorBtn');
+        const badge = document.getElementById('generatorStatusBadge');
+
+        const originalText = btn ? btn.textContent : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = '...';
+        }
+
         try {
-            const btn = document.getElementById('toggleGeneratorBtn');
+            // Check current status from badge or implicit
             let action = 'start';
-            if (btn && btn.textContent.trim() === '停止') {
+            if (btn && originalText.trim() === '停止') {
                 action = 'stop';
             }
+            // Better: rely on current badge text? Or just try to toggle based on current UI state
+            if (badge && badge.textContent.includes('运行')) {
+                action = 'stop';
+            }
+
             const res = await fetch(`/api/idea-generator/${action}`, { method: 'POST' });
             const data = await res.json();
             if (data.success) {
-                this.refreshNiuMaStation();
+                setTimeout(() => this.refreshNiuMaStation(), 500);
+            } else {
+                if (btn) btn.textContent = originalText;
             }
         } catch (e) {
             console.warn(e);
+            if (btn) btn.textContent = originalText;
+        } finally {
+            if (btn) btn.disabled = false;
         }
     }
 }
@@ -1163,15 +1202,15 @@ document.addEventListener('DOMContentLoaded', () => {
 window.refreshAll = () => ui.refreshAll();
 window.refreshApps = () => ui.refreshApps();
 window.filterApps = () => ui.filterApps();
-window.selectApp = (appId) => ui.selectApp(appId);
-window.newApp = () => ui.startNewApp();
+window.selectApp = (id) => ui.selectApp(id);
+window.newApp = () => ui.createNewApp();
 window.sendIteration = () => ui.sendIteration();
 window.clearInput = () => ui.clearInput();
 window.refreshProject = () => ui.refreshProject();
-window.openFile = (relPath) => ui.openFile(relPath);
+window.openFile = (p) => ui.openFile(p);
 window.toggleRun = () => ui.toggleRun();
 window.openPreviewTab = () => ui.openPreviewTab();
-window.setRightTab = (tab) => ui.setRightTab(tab);
+window.setRightTab = (t) => ui.setRightTab(t);
 window.toggleLeftPane = () => ui.toggleLeftPane();
 window.toggleRightPane = () => ui.toggleRightPane();
 
