@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>成语接龙游戏</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🐉 成语接龙游戏</h1>
+      <p class="subtitle">用上一个成语的最后一个字作为下一个成语的第一个字</p>
+    </header>
+
+    <div class="game-area">
+      <div class="status-bar">
+        <span class="score">得分: <strong id="score">0</strong></span>
+        <span class="chain-count">接龙数: <strong id="chainCount">0</strong></span>
+      </div>
+
+      <div class="current-idiom">
+        <span class="label">当前成语:</span>
+        <span id="currentIdiom" class="idiom-text">点击开始游戏</span>
+      </div>
+
+      <div class="input-area">
+        <input 
+          type="text" 
+          id="idiomInput" 
+          placeholder="输入4字成语" 
+          maxlength="4"
+          autocomplete="off"
+        >
+        <button id="submitBtn" class="btn btn-primary">提交</button>
+      </div>
+
+      <div class="hint-area">
+        <button id="hintBtn" class="btn btn-secondary">💡 提示</button>
+        <div id="hintResult" class="hints"></div>
+      </div>
+
+      <div class="controls">
+        <button id="startBtn" class="btn btn-success">开始游戏</button>
+        <button id="restartBtn" class="btn btn-warning" style="display: none;">重新开始</button>
+      </div>
+
+      <div class="message-area">
+        <div id="message" class="message"></div>
+      </div>
+
+      <div class="history">
+        <h3>接龙记录</h3>
+        <div id="historyList" class="history-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

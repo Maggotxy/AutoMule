@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON 格式化工具</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>JSON 格式化工具</h1>
+      <p class="subtitle">格式化、校验和语法高亮</p>
+    </header>
+
+    <div class="main-content">
+      <div class="panel left-panel">
+        <div class="panel-header">
+          <h2>输入 JSON</h2>
+          <div class="actions">
+            <button id="clearBtn" class="btn btn-secondary">清空</button>
+            <button id="sampleBtn" class="btn btn-secondary">示例</button>
+          </div>
+        </div>
+        <textarea id="inputJson" placeholder="在此粘贴或输入 JSON..."></textarea>
+        <div id="inputError" class="error-message"></div>
+      </div>
+
+      <div class="controls">
+        <button id="formatBtn" class="btn btn-primary">格式化</button>
+        <button id="minifyBtn" class="btn btn-secondary">压缩</button>
+        <button id="validateBtn" class="btn btn-secondary">校验</button>
+      </div>
+
+      <div class="panel right-panel">
+        <div class="panel-header">
+          <h2>输出结果</h2>
+          <div class="actions">
+            <button id="copyBtn" class="btn btn-secondary">复制</button>
+          </div>
+        </div>
+        <div id="outputJson" class="output-area"></div>
+        <div id="outputStatus" class="status-message"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

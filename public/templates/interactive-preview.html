@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交互式代码预览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .preview-area {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            background: #f9f9f9;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .output {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            min-height: 100px;
+            white-space: pre-wrap;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .metric {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 交互式代码预览</h1>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('demo')">演示</div>
+            <div class="tab" onclick="switchTab('code')">代码</div>
+            <div class="tab" onclick="switchTab('docs')">文档</div>
+        </div>
+
+        <div id="demo" class="tab-content active">
+            <div class="card">
+                <h3>📊 实时数据仪表板</h3>
+                <div class="grid">
+                    <div class="metric">
+                        <div class="metric-value" id="totalUsers">0</div>
+                        <div class="metric-label">总用户数</div>
+                    </div>
+                    <div class="metric" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                        <div class="metric-value" id="activeUsers">0</div>
+                        <div class="metric-label">活跃用户</div>
+                    </div>
+                    <div class="metric" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                        <div class="metric-value" id="todayOrders">0</div>
+                        <div class="metric-label">今日订单</div>
+                    </div>
+                    <div class="metric" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                        <div class="metric-value" id="totalRevenue">¥0</div>
+                        <div class="metric-label">总收入</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🎮 交互控制</h3>
+                <div class="controls">
+                    <button onclick="updateMetrics()">刷新数据</button>
+                    <button onclick="simulateGrowth()">模拟增长</button>
+                    <button onclick="resetData()">重置数据</button>
+                </div>
+                <div class="preview-area">
+                    <div class="status success" id="status">系统运行正常</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="code" class="tab-content">
+            <div class="card">
+                <h3>💻 生成的代码</h3>
+                <div class="preview-area">
+                    <pre><code>// 实时数据仪表板示例代码
+
+const updateMetrics = () => {
+    // 模拟数据更新
+    const metrics = {
+        totalUsers: Math.floor(Math.random() * 10000),
+        activeUsers: Math.floor(Math.random() * 1000),
+        todayOrders: Math.floor(Math.random() * 500),
+        totalRevenue: Math.floor(Math.random() * 100000)
+    };
+
+    // 更新 UI
+    document.getElementById('totalUsers').textContent = metrics.totalUsers;
+    document.getElementById('activeUsers').textContent = metrics.activeUsers;
+    document.getElementById('todayOrders').textContent = metrics.todayOrders;
+    document.getElementById('totalRevenue').textContent = `¥${metrics.totalRevenue}`;
+
+    return metrics;
+};
+
+// 自动更新
+setInterval(updateMetrics, 5000);</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div id="docs" class="tab-content">
+            <div class="card">
+                <h3>📖 使用说明</h3>
+                <div class="preview-area">
+                    <h4>功能特性</h4>
+                    <ul>
+                        <li>✅ 实时数据更新</li>
+                        <li>✅ 响应式设计</li>
+                        <li>✅ 交互式控制</li>
+                        <li>✅ 美观的 UI 界面</li>
+                    </ul>
+
+                    <h4>使用方法</h4>
+                    <ol>
+                        <li>点击"刷新数据"按钮更新指标</li>
+                        <li>点击"模拟增长"查看数据变化</li>
+                        <li>点击"重置数据"恢复初始状态</li>
+                    </ol>
+
+                    <h4>技术栈</h4>
+                    <ul>
+                        <li>HTML5 / CSS3 / JavaScript</li>
+                        <li>响应式布局</li>
+                        <li>渐变背景设计</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 数据存储
+        let currentData = {
+            totalUsers: 0,
+            activeUsers: 0,
+            todayOrders: 0,
+            totalRevenue: 0
+        };
+
+        // 更新指标
+        function updateMetrics() {
+            currentData = {
+                totalUsers: Math.floor(Math.random() * 10000),
+                activeUsers: Math.floor(Math.random() * 1000),
+                todayOrders: Math.floor(Math.random() * 500),
+                totalRevenue: Math.floor(Math.random() * 100000)
+            };
+
+            document.getElementById('totalUsers').textContent = currentData.totalUsers;
+            document.getElementById('activeUsers').textContent = currentData.activeUsers;
+            document.getElementById('todayOrders').textContent = currentData.todayOrders;
+            document.getElementById('totalRevenue').textContent = `¥${currentData.totalRevenue}`;
+
+            updateStatus('数据已更新', 'success');
+        }
+
+        // 模拟增长
+        function simulateGrowth() {
+            currentData.totalUsers += Math.floor(Math.random() * 100);
+            currentData.activeUsers += Math.floor(Math.random() * 50);
+            currentData.todayOrders += Math.floor(Math.random() * 20);
+            currentData.totalRevenue += Math.floor(Math.random() * 1000);
+
+            document.getElementById('totalUsers').textContent = currentData.totalUsers;
+            document.getElementById('activeUsers').textContent = currentData.activeUsers;
+            document.getElementById('todayOrders').textContent = currentData.todayOrders;
+            document.getElementById('totalRevenue').textContent = `¥${currentData.totalRevenue}`;
+
+            updateStatus('数据增长中...', 'info');
+        }
+
+        // 重置数据
+        function resetData() {
+            currentData = {
+                totalUsers: 0,
+                activeUsers: 0,
+                todayOrders: 0,
+                totalRevenue: 0
+            };
+
+            document.getElementById('totalUsers').textContent = '0';
+            document.getElementById('activeUsers').textContent = '0';
+            document.getElementById('todayOrders').textContent = '0';
+            document.getElementById('totalRevenue').textContent = '¥0';
+
+            updateStatus('数据已重置', 'info');
+        }
+
+        // 更新状态
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        // 切换标签
+        function switchTab(tabId) {
+            // 隐藏所有标签内容
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // 移除所有标签的 active 类
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // 显示选中的标签内容
+            document.getElementById(tabId).classList.add('active');
+
+            // 添加 active 类到选中的标签
+            event.target.classList.add('active');
+        }
+
+        // 初始化
+        updateMetrics();
+
+        // 自动更新
+        setInterval(updateMetrics, 5000);
+    </script>
+</body>
+</html>

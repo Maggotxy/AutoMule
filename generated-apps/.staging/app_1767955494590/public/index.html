@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>渐变色调色板生成器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎨 渐变色调色板生成器</h1>
+            <p class="subtitle">创建美丽的渐变色，自动生成配色方案</p>
+        </header>
+
+        <main>
+            <!-- 颜色选择器区域 -->
+            <section class="color-picker-section">
+                <h2>选择颜色</h2>
+                <div class="color-inputs" id="colorInputs">
+                    <div class="color-input-wrapper">
+                        <input type="color" id="color1" value="#667eea">
+                        <input type="text" class="color-text" value="#667eea" readonly>
+                    </div>
+                    <div class="color-input-wrapper">
+                        <input type="color" id="color2" value="#764ba2">
+                        <input type="text" class="color-text" value="#764ba2" readonly>
+                    </div>
+                </div>
+                <div class="controls">
+                    <button id="addColor" class="btn btn-secondary">+ 添加颜色</button>
+                    <button id="removeColor" class="btn btn-secondary">- 移除颜色</button>
+                </div>
+            </section>
+
+            <!-- 渐变预览区域 -->
+            <section class="gradient-preview-section">
+                <h2>渐变预览</h2>
+                <div class="gradient-preview" id="gradientPreview"></div>
+                <div class="gradient-code">
+                    <code id="gradientCode">background: linear-gradient(90deg, #667eea, #764ba2);</code>
+                    <button id="copyGradient" class="btn btn-small">复制</button>
+                </div>
+            </section>
+
+            <!-- 渐变方向控制 -->
+            <section class="gradient-controls-section">
+                <h2>渐变方向</h2>
+                <div class="angle-control">
+                    <label for="angle">角度: <span id="angleValue">90</span>°</label>
+                    <input type="range" id="angle" min="0" max="360" value="90">
+                </div>
+            </section>
+
+            <!-- 色板生成区域 -->
+            <section class="palette-section">
+                <h2>自动生成色板</h2>
+                <div class="palettes" id="palettes">
+                    <!-- 色板将通过 JS 动态生成 -->
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>点击色板可复制颜色代码</p>
+        </footer>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

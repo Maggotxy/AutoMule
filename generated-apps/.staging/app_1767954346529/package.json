@@ -1,0 +1,12 @@
+{
+  "name": "json-formatter",
+  "version": "1.0.0",
+  "description": "JSON格式化和校验工具",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

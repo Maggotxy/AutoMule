@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JSON 格式化工具</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>JSON 格式化工具</h1>
+      <p class="subtitle">格式化、校验、语法高亮</p>
+    </header>
+
+    <div class="main-content">
+      <div class="input-section">
+        <div class="toolbar">
+          <button id="formatBtn" class="btn btn-primary">格式化</button>
+          <button id="minifyBtn" class="btn btn-secondary">压缩</button>
+          <button id="clearBtn" class="btn btn-danger">清空</button>
+          <button id="sampleBtn" class="btn btn-info">示例</button>
+        </div>
+        <textarea id="jsonInput" placeholder="在此粘贴 JSON..."></textarea>
+      </div>
+
+      <div class="output-section">
+        <div class="toolbar">
+          <span class="status" id="status"></span>
+          <button id="copyBtn" class="btn btn-success">复制</button>
+        </div>
+        <pre id="jsonOutput" class="json-output"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

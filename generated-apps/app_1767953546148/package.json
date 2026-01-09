@@ -1,0 +1,12 @@
+{
+  "name": "text-diff-tool",
+  "version": "1.0.0",
+  "description": "在线文本对比工具，支持高亮显示差异",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>像素风博客 | Pixel Blog</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="pixel-header">
+      <h1 class="pixel-title">像素风博客</h1>
+      <nav class="pixel-nav">
+        <a href="#" class="nav-link active" data-section="home">首页</a>
+        <a href="#" class="nav-link" data-section="articles">文章</a>
+        <a href="#" class="nav-link" data-section="about">关于</a>
+      </nav>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="pixel-main">
+      <!-- 首页区域 -->
+      <section id="home-section" class="section active">
+        <div class="hero-box">
+          <h2 class="pixel-subtitle">欢迎来到像素世界</h2>
+          <p class="pixel-text">探索 8-bit 时代的数字美学</p>
+        </div>
+        
+        <div class="latest-posts">
+          <h3 class="section-title">最新文章</h3>
+          <div id="latest-posts-list" class="posts-grid">
+            <!-- 动态加载 -->
+          </div>
+        </div>
+      </section>
+
+      <!-- 文章列表区域 -->
+      <section id="articles-section" class="section">
+        <h3 class="section-title">所有文章</h3>
+        <div id="all-posts-list" class="posts-grid">
+          <!-- 动态加载 -->
+        </div>
+      </section>
+
+      <!-- 关于区域 -->
+      <section id="about-section" class="section">
+        <div class="about-box">
+          <h3 class="section-title">关于本博客</h3>
+          <p class="pixel-text">这是一个采用高级像素风格设计的博客系统，采用白灰黑配色方案，致敬复古游戏时代的视觉美学。</p>
+          <p class="pixel-text">设计理念：简约而不简单，像素而不粗糙。</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="pixel-footer">
+      <p class="pixel-text">© 2026 像素风博客 | Pixel Blog</p>
+    </footer>
+
+    <!-- 文章详情模态框 -->
+    <div id="post-modal" class="modal-overlay">
+      <div class="modal-content">
+        <button class="modal-close" onclick="closeModal()">✕</button>
+        <h2 id="modal-title" class="modal-title"></h2>
+        <div class="modal-meta">
+          <span id="modal-date" class="modal-date"></span>
+          <span id="modal-tag" class="modal-tag"></span>
+        </div>
+        <div id="modal-body" class="modal-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

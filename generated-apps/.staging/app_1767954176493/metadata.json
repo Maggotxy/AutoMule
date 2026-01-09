@@ -1,0 +1,18 @@
+{
+  "id": "app_1767954176493",
+  "name": "JSON 格式化工具",
+  "type": "json-tool",
+  "port": 3002,
+  "status": "stopped",
+  "createdAt": "2026-01-09T10:22:56.494Z",
+  "ideaKey": "C:\\CDevelopment\\iflow\\ideas\\auto_1767954176486.txt",
+  "ideaHistory": [
+    {
+      "revision": 1,
+      "timestamp": "2026-01-09T10:22:56.494Z",
+      "text": "创建一个 JSON 格式化和校验工具，带语法高亮\n\n【自动生成】\n此想法由赛博牛马工作站自动生成\n生成时间：2026/1/9 18:22:56"
+    }
+  ],
+  "lastRevision": 1,
+  "lastPreparedAt": "2026-01-09T10:22:56.494Z"
+}
