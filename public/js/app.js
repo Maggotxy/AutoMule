@@ -14,14 +14,12 @@ class ManusUI {
         this.newAppMode = false;
         this.isAutoSelecting = false;
         this.liveByTaskId = new Map(); // taskId -> text
+        this.taskActivityByTaskId = new Map(); // taskId -> { toolCallCount, lastActivityAt }
         this.refreshConversationTimer = null;
         this.refreshAppsTimer = null;
         this.elapsedTicker = null;
         this.tickInFlight = false;
         this.hasProcessing = false;
-        this.hasProcessing = false;
-        this.niuMaStation = null;
-        this.niurnaStates = {};
 
         this.init();
     }
@@ -241,22 +239,6 @@ class ManusUI {
         }
     }
 
-    async refreshNiuMaStation() {
-        try {
-            const res = await fetch('/api/niuma-station');
-            const data = await res.json();
-            if (data.success) {
-                this.niuMaStation = data;
-                this.niurnaStates = data.allNiuma || {};
-                if (this.activeApp && this.niurnaStates[this.activeApp.id]) {
-                    // Sync if needed
-                }
-            }
-        } catch (e) {
-            console.warn('获取牛马工作站状态失败', e);
-        }
-    }
-
     renderAppsError(msg) {
         const container = document.getElementById('apps');
         if (!container) return;
@@ -279,88 +261,33 @@ class ManusUI {
             return !search || hay.includes(search);
         });
 
-        container.innerHTML = (this.apps || []).map(app => {
+        container.innerHTML = filtered.map(app => {
             const statusClass = app.status || 'stopped';
             const statusText = statusClass === 'running' ? '运行中'
                 : statusClass === 'starting' ? '启动中'
-                    : '已停止';
-
-            // NiuMa 状态
-            const niuMaState = this.niurnaStates[app.id];
-            const isNiuMaActive = niuMaState && niuMaState.enabled;
-            const niuMaStatus = niuMaState ? niuMaState.status : 'idle'; // working, resting, paused, idle
-            const niuMaFocus = niuMaState ? (niuMaState.focusDimension || '') : '';
-
-            // 构建 NiuMa 状态 UI (赛博牛马风)
-            let niuMaBadge = '';
-            let niuMaControls = '';
-
-            if (isNiuMaActive) {
-                const statusMap = {
-                    'working': { icon: '🔥', text: '搬砖中', class: 'text-danger' },
-                    'resting': { icon: '☕', text: '摸鱼中', class: 'text-success' },
-                    'paused': { icon: '⏸️', text: '暂停', class: 'text-warning' },
-                    'idle': { icon: '💤', text: '待命', class: 'text-muted' }
-                };
-                const st = statusMap[niuMaStatus] || statusMap['idle'];
-                niuMaBadge = `<span class="badge" title="24小时自动打工中" style="margin-left:auto;"><i class="bi bi-robot"></i> ${st.icon} ${st.text}</span>`;
-            }
-
-            // NiuMa 控制区
-            const dimensions = [
-                { k: '', v: '⚖️ 均衡' },
-                { k: 'ui', v: '🎨 颜值' },
-                { k: 'userEffect', v: '❤️ 体验' },
-                { k: 'codeQuality', v: '🛡️ 质量' },
-                { k: 'efficiency', v: '⚡ 效率' }
-            ];
-
-            const btnText = isNiuMaActive ? '☕ 摸鱼' : '🐂 搬砖';
-            // Stop propagation to prevent selecting the app when clicking buttons
-            niuMaControls = `
-                <div class="niuma-controls mt-2 d-flex flex-row gap-1 align-items-center" onclick="event.stopPropagation()" style="width: 100%;">
-                    <button class="btn btn-sm ${isNiuMaActive ? 'btn-outline-danger' : 'btn-outline-primary'}" 
-                        onclick="toggleNiuMa('${app.id}')"
-                        style="white-space: nowrap; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;">
-                        ${btnText}
-                    </button>
-                    <select class="form-select form-select-sm" style="flex-grow: 1; min-width: 0;" 
-                        onchange="setNiuMaFocus('${app.id}', this.value)" 
-                        onclick="event.stopPropagation()">
-                        ${dimensions.map(d => `<option value="${d.k}" ${niuMaFocus === d.k ? 'selected' : ''}>${d.v}</option>`).join('')}
-                    </select>
-                </div>
-            `;
-
+                : '已停止';
             const displayStatusClass = statusClass === 'creating' ? 'starting' : statusClass;
             const displayStatusText = statusClass === 'creating' ? '生成中' : statusText;
-            const displayStatusTextSafe = statusClass === 'creating' ? '\u751f\u6210\u4e2d' : statusText; // "生成中" safe string
+            const displayStatusTextSafe = statusClass === 'creating' ? '\u751f\u6210\u4e2d' : statusText;
             const displayStatusTextFinal = statusClass === 'creating'
                 ? `${displayStatusTextSafe} ${this.formatElapsedFromIso(app.createdAt || app.updatedAt)}`
                 : displayStatusTextSafe;
-
             const creatingFrom = app.createdAt || app.updatedAt || '';
             const badge = statusClass === 'creating'
                 ? `<span class="badge ${displayStatusClass}">\u751f\u6210\u4e2d <span data-elapsed-from="${this.escapeHtml(creatingFrom)}">${this.formatElapsedFromIso(creatingFrom)}</span></span>`
                 : `<span class="badge ${displayStatusClass}">${displayStatusTextFinal}</span>`;
-
             const ideaFile = app.ideaKey ? String(app.ideaKey).split(/[/\\\\]/).pop() : '';
-            const isActive = this.activeApp && this.activeApp.id === app.id;
 
+            const isActive = this.activeApp && this.activeApp.id === app.id;
             return `
                 <div class="app-row ${isActive ? 'active' : ''}" onclick="selectApp('${this.escapeHtml(app.id)}')">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="name fw-bold">${this.escapeHtml(app.name || app.id)}</div>
-                        ${niuMaBadge}
-                    </div>
-                    
-                    <div class="meta mt-1">
+                    <div class="name">${this.escapeHtml(app.name || app.id)}</div>
+                    <div class="meta">
                         ${badge}
-                        <span class="badge bg-light text-dark border"><i class="bi bi-tag"></i> ${this.escapeHtml(app.type || 'default')}</span>
-                        ${app.port ? `<span class="badge bg-light text-dark border"><i class="bi bi-router"></i> ${app.port}</span>` : ''}
+                        <span class="badge"><i class="bi bi-tag"></i>${this.escapeHtml(app.type || 'default')}</span>
+                        ${app.port ? `<span class="badge"><i class="bi bi-router"></i>${app.port}</span>` : ''}
+                        ${ideaFile ? `<span class="badge"><i class="bi bi-file-earmark-text"></i>${this.escapeHtml(ideaFile)}</span>` : ''}
                     </div>
-                    
-                    ${isActive || isNiuMaActive ? niuMaControls : ''}
                 </div>
             `;
         }).join('');
@@ -370,21 +297,24 @@ class ManusUI {
         this.renderApps();
     }
 
-    createNewApp() {
+    startNewApp() {
+        this.newAppMode = true;
         this.activeApp = null;
         this.activeIdeaKey = null;
         this.activeIdeaFileName = null;
-        this.newAppMode = true;
+        this.activeTreeSelectedPath = null;
 
-        // 清空输入框并聚焦
-        this.clearInput();
-        const input = document.getElementById('chatInput');
-        if (input) input.focus();
+        this.leftCollapsed = false;
+        this.applyPaneState();
+        this.savePaneState();
 
-        // 刷新 UI 以显示默认的“添加灵感”界面
         this.renderApps();
         this.refreshConversation();
         this.refreshProject();
+        this.updateRunButtons();
+
+        const input = document.getElementById('chatInput');
+        if (input) input.focus();
     }
 
     async selectApp(appId) {
@@ -672,7 +602,15 @@ class ManusUI {
                     if (task.status === 'processing') {
                         const live = this.liveByTaskId.get(task.id);
                         const elapsed = this.formatElapsedFromIso(task.startedAt || task.createdAt);
-                        messages.push({ role: 'assistant', text: live || `处理中… (${elapsed})`, meta: `processing ${elapsed}` });
+
+                        // ✅ 增强：显示工具调用计数和活动状态
+                        const activity = this.taskActivityByTaskId.get(task.id);
+                        const toolCallInfo = activity && activity.toolCallCount > 0
+                            ? ` | 工具调用×${activity.toolCallCount}`
+                            : '';
+
+                        const fallbackText = `处理中… (${elapsed})${toolCallInfo}`;
+                        messages.push({ role: 'assistant', text: live || fallbackText, meta: `processing ${elapsed}` });
                     } else if (task.status === 'completed') {
                         messages.push({ role: 'assistant', text: this.buildAssistantSummary(task), meta: '' });
                         this.liveByTaskId.delete(task.id);
@@ -702,7 +640,15 @@ class ManusUI {
                 if (t.status === 'processing') {
                     const live = this.liveByTaskId.get(t.id);
                     const elapsed = this.formatElapsedFromIso(t.startedAt || t.createdAt);
-                    messages.push({ role: 'assistant', text: live || `处理中…(${elapsed})`, meta: `processing ${elapsed}` });
+
+                    // ✅ 增强：显示工具调用计数
+                    const activity = this.taskActivityByTaskId.get(t.id);
+                    const toolCallInfo = activity && activity.toolCallCount > 0
+                        ? ` | 工具调用×${activity.toolCallCount}`
+                        : '';
+
+                    const fallbackText = `处理中…(${elapsed})${toolCallInfo}`;
+                    messages.push({ role: 'assistant', text: live || fallbackText, meta: `processing ${elapsed}` });
                 } else if (t.status === 'completed') {
                     messages.push({ role: 'assistant', text: this.buildAssistantSummary(t), meta: '' });
                     this.liveByTaskId.delete(t.id);
@@ -723,7 +669,15 @@ class ManusUI {
                 if (t.status === 'processing') {
                     const live = this.liveByTaskId.get(t.id);
                     const elapsed = this.formatElapsedFromIso(t.startedAt || t.createdAt);
-                    messages.push({ role: 'assistant', text: live || `处理中… (${elapsed})`, meta: `processing ${elapsed}` });
+
+                    // ✅ 增强：显示工具调用计数
+                    const activity = this.taskActivityByTaskId.get(t.id);
+                    const toolCallInfo = activity && activity.toolCallCount > 0
+                        ? ` | 工具调用×${activity.toolCallCount}`
+                        : '';
+
+                    const fallbackText = `处理中…(${elapsed})${toolCallInfo}`;
+                    messages.push({ role: 'assistant', text: live || fallbackText, meta: `processing ${elapsed}` });
                 }
                 if (t.status === 'completed') {
                     const assistantText = this.buildAssistantSummary(t);
@@ -738,32 +692,10 @@ class ManusUI {
         }
 
         // 如果没有任务，但收到了 newIdea（或 taskUpdate 丢失），也显示一个待执行的“你”气泡
-        // ✅ 修复重复显示问题：只有当 messages 里没有相同的文本时才添加 pending
-        if (pendingForKey && pendingForKey.content) {
-            const alreadyExists = messages.some(m => m.role === 'user' && m.text === pendingForKey.content);
-            if (!alreadyExists) {
-                const meta = pendingForKey.revision != null ? `rev ${pendingForKey.revision}` : '';
-                messages.push({ role: 'user', text: pendingForKey.content, meta });
-                messages.push({ role: 'assistant', text: '等待执行…', meta: 'pending' });
-            }
-        }
-
-        // ✅ 检查当前 App 是否有正在进行的 NiuMa 任务（赛博牛马）
-        const niuMaState = this.activeApp ? this.niurnaStates[this.activeApp.id] : null;
-        if (niuMaState && niuMaState.status === 'working' && niuMaState.currentTaskId) {
-            const taskId = niuMaState.currentTaskId;
-            const alreadyShown = messages.some(m => m.meta && m.meta.includes('processing') && this.liveByTaskId.get(taskId));
-
-            if (!alreadyShown) {
-                const live = this.liveByTaskId.get(taskId);
-                const elapsed = this.formatElapsedFromIso(niuMaState.lastIterateAt || new Date().toISOString());
-                const text = live || `🐂 牛马正在大力搬砖中... (${elapsed})\n🎯 专注维度：${niuMaState.focusDimension || '均衡'}\n💭 正在思考如何让老板满意...`;
-                messages.push({
-                    role: 'assistant',
-                    text: text,
-                    meta: `processing ${elapsed} (NiuMa)`
-                });
-            }
+        if (messages.length === 0 && pendingForKey && pendingForKey.content) {
+            const meta = pendingForKey.revision != null ? `rev ${pendingForKey.revision}` : '';
+            messages.push({ role: 'user', text: pendingForKey.content, meta });
+            messages.push({ role: 'assistant', text: '等待执行…', meta: 'pending' });
         }
 
         if (messages.length === 0) {
@@ -813,6 +745,14 @@ class ManusUI {
         if (!payload || !payload.taskId) return;
         const current = this.liveByTaskId.get(payload.taskId) || '';
 
+        // 📊 追踪任务活动（工具调用、消息等）
+        let activity = this.taskActivityByTaskId.get(payload.taskId);
+        if (!activity) {
+            activity = { toolCallCount: 0, lastActivityAt: Date.now() };
+            this.taskActivityByTaskId.set(payload.taskId, activity);
+        }
+        activity.lastActivityAt = Date.now();
+
         if (payload.type === 'assistant_chunk' && typeof payload.text === 'string' && payload.text) {
             const next = (current + payload.text).slice(-12000);
             this.liveByTaskId.set(payload.taskId, next);
@@ -820,19 +760,25 @@ class ManusUI {
             return;
         }
 
-        if ((payload.type === 'status' || payload.type === 'log') && typeof payload.text === 'string' && payload.text) {
+        if (payload.type === 'status' && typeof payload.text === 'string' && payload.text) {
+            // ✅ 统计工具调用次数（用于显示进度）
+            if (payload.text.includes('工具:')) {
+                activity.toolCallCount++;
+            }
+
             const next = (current + (current ? '\n' : '') + payload.text).slice(-12000);
             this.liveByTaskId.set(payload.taskId, next);
+            this.scheduleRefreshConversation();
+            return;
+        }
+
+        // ✅ 其他类型的消息也触发刷新（显示占位符进度）
+        if (payload.type) {
             this.scheduleRefreshConversation();
         }
     }
 
     buildAssistantSummary(task) {
-        // ✅ 优先展示完整日志（包含提示词和执行过程）
-        if (task.result && task.result.logs) {
-            return task.result.logs;
-        }
-
         const app = task.app;
         const lines = [];
         if (app?.port) lines.push(`http://localhost:${app.port}`);
@@ -1006,174 +952,3 @@ window.openPreviewTab = () => ui.openPreviewTab();
 window.setRightTab = (tab) => ui.setRightTab(tab);
 window.toggleLeftPane = () => ui.toggleLeftPane();
 window.toggleRightPane = () => ui.toggleRightPane();
-window.newApp = () => ui.createNewApp();
-window.refreshApps = () => ui.refreshApps();
-window.refreshAll = () => ui.refreshAll();
-
-// ========== 赛博牛马控制 (Cyber NiuMa) ==========
-
-let autoIterateState = null;
-
-// 切换自动迭代
-window.toggleAutoIterate = async () => {
-    if (!ui.activeApp) {
-        alert('请先选择一个应用');
-        return;
-    }
-    const appId = ui.activeApp.id;
-    await window.toggleNiuMa(appId);
-};
-
-// 切换指定应用的牛马（独立控制）
-window.toggleNiuMa = async (appId) => {
-    try {
-        const res = await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate`);
-        const data = await res.json();
-        const isRunning = data.state && data.state.enabled;
-
-        if (isRunning) {
-            await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate/stop`, { method: 'POST' });
-        } else {
-            await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate/start`, { method: 'POST' });
-        }
-
-        await ui.refreshNiuMaStation();
-        ui.renderApps();
-    } catch (e) {
-        console.error('牛马控制失败', e);
-    }
-};
-
-// 设置指定应用的牛马关注维度
-window.setNiuMaFocus = async (appId, dimension) => {
-    try {
-        await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate/focus`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dimension })
-        });
-        await ui.refreshNiuMaStation();
-        ui.renderApps();
-        console.log(`🎯 牛马 ${appId} 关注维度设置为: ${dimension || '均衡'}`);
-    } catch (e) {
-        console.error('设置关注维度失败', e);
-    }
-};
-
-// 刷新自动迭代状态
-async function refreshAutoIterateState() {
-    if (!ui.activeApp) {
-        updateAutoIterateUI(null);
-        return;
-    }
-    try {
-        const res = await fetch(`/api/apps/${encodeURIComponent(ui.activeApp.id)}/auto-iterate`);
-        const data = await res.json();
-        autoIterateState = data.state;
-        updateAutoIterateUI(autoIterateState);
-    } catch (e) {
-        updateAutoIterateUI(null);
-    }
-}
-
-// 更新自动迭代 UI
-function updateAutoIterateUI(state) {
-    const statusEl = document.getElementById('iterateStatusDisplay');
-    const focusSelect = document.getElementById('focusDimensionSelect');
-
-    if (!state) {
-        if (statusEl) statusEl.textContent = '待命';
-        if (focusSelect) focusSelect.value = '';
-        return;
-    }
-
-    if (statusEl) {
-        const statusMap = {
-            'idle': '待命',
-            'working': '搬砖中🔥',
-            'resting': '摸鱼中☕',
-            'paused': '暂停⏸️'
-        };
-        statusEl.textContent = statusMap[state.status] || state.status;
-    }
-    if (focusSelect && state.focusDimension !== undefined) {
-        focusSelect.value = state.focusDimension || '';
-    }
-}
-
-// 更新工作站统计 UI
-function updateStationUI() {
-    if (!ui || !ui.niuMaStation) return;
-
-    const station = ui.niuMaStation.station;
-    const generator = ui.niuMaStation.generator;
-
-    // 更新工作站统计
-    const workingEl = document.getElementById('workingCount');
-    const totalIterEl = document.getElementById('totalIterations');
-    if (station) {
-        if (workingEl) workingEl.textContent = station.workingCount || 0;
-        if (totalIterEl) totalIterEl.textContent = station.totalIterations || 0;
-    }
-
-    // 更新想法生成器状态
-    const genBtn = document.getElementById('toggleGeneratorBtn');
-    const genBadge = document.getElementById('generatorStatusBadge');
-    if (generator) {
-        if (genBtn) {
-            genBtn.textContent = generator.enabled ? '停止' : '启动';
-            genBtn.style.background = generator.enabled ? 'rgba(231, 76, 60, 0.2)' : 'rgba(155, 89, 182, 0.2)';
-        }
-        if (genBadge) {
-            genBadge.textContent = generator.enabled ? `转动中 (${generator.todayCount}/${generator.maxIdeasPerDay})` : '停止';
-            genBadge.style.background = generator.enabled ? 'rgba(46, 204, 113, 0.3)' : 'rgba(149, 165, 166, 0.3)';
-        }
-    }
-}
-
-// 切换想法生成器
-window.toggleIdeaGenerator = async () => {
-    try {
-        const res = await fetch('/api/idea-generator');
-        const data = await res.json();
-        const isRunning = data.enabled;
-
-        if (isRunning) {
-            await fetch('/api/idea-generator/stop', { method: 'POST' });
-        } else {
-            await fetch('/api/idea-generator/start', { method: 'POST' });
-        }
-        await ui.refreshNiuMaStation();
-        updateStationUI();
-    } catch (e) {
-        console.error('切换想法生成器失败', e);
-    }
-};
-
-// 定期刷新状态
-setInterval(async () => {
-    if (ui) {
-        await ui.refreshNiuMaStation();
-        updateStationUI();
-        if (ui.activeApp) {
-            await refreshAutoIterateState();
-        }
-    }
-}, 5000);
-
-// 在选择应用时刷新自动迭代状态
-const originalSelectApp = ui ? ui.selectApp.bind(ui) : null;
-if (ui && originalSelectApp) {
-    ui.selectApp = async function (appId) {
-        await originalSelectApp(appId);
-        await refreshAutoIterateState();
-        updateStationUI();
-    };
-}
-
-// 初始加载时更新工作站 UI
-setTimeout(() => {
-    if (ui) {
-        ui.refreshNiuMaStation().then(() => updateStationUI());
-    }
-}, 2000);

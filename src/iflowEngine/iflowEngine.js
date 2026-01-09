@@ -5,8 +5,6 @@ const fs = require('fs');
 const net = require('net');
 const logger = require('../utils/logger');
 const { runIFlowIteration, logIFlowFailureHint } = require('./iflowSdk');
-const { SessionManager } = require('./sessionManager');
-const { AutoIterator } = require('./autoIterator');
 
 class iFlowEngine extends EventEmitter {
   constructor(config) {
@@ -26,21 +24,15 @@ class iFlowEngine extends EventEmitter {
     if (!fs.existsSync(this.outputDirectory)) {
       fs.mkdirSync(this.outputDirectory, { recursive: true });
     }
-
+    
     if (!fs.existsSync(this.appsDirectory)) {
       fs.mkdirSync(this.appsDirectory, { recursive: true });
     }
-
+    
     // 初始化时扫描已存在的应用
     this.scanExistingApps();
     this.buildIdeaKeyIndex();
     this.cleanupStagingRoot();
-
-    // 初始化多会话管理器
-    this.sessionManager = new SessionManager(config);
-
-    // 初始化自动迭代器（赛博牛马）
-    this.autoIterator = new AutoIterator(config, this);
   }
 
   getIFlowPort() {
@@ -116,7 +108,7 @@ class iFlowEngine extends EventEmitter {
       const finish = (ok) => {
         if (done) return;
         done = true;
-        try { socket.destroy(); } catch { }
+        try { socket.destroy(); } catch {}
         resolve(ok);
       };
 
@@ -362,7 +354,7 @@ class iFlowEngine extends EventEmitter {
     if (!Number.isFinite(n) || n <= 0) return;
     try {
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, n);
-    } catch { }
+    } catch {}
   }
 
   renameSyncWithRetry(fromDir, toDir, { retries = 10, baseDelayMs = 80 } = {}) {
@@ -492,7 +484,7 @@ class iFlowEngine extends EventEmitter {
         }
         const appDir = path.join(this.appsDirectory, appId);
         const packageJsonPath = path.join(appDir, 'package.json');
-
+        
         if (fs.existsSync(packageJsonPath)) {
           try {
             const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
@@ -575,20 +567,9 @@ class iFlowEngine extends EventEmitter {
       (async () => {
         let prep = null;
         let restartAfterIteration = false;
-        let session = null;
-        const appIdForSession = idea && typeof idea.ideaKey === 'string' ? this.ideaKeyToAppId.get(idea.ideaKey) || `temp_${taskId}` : `temp_${taskId}`;
-
         try {
           if (idea && typeof idea.ideaKey === 'string' && idea.ideaKey) {
             this.upsertPendingApp({ ideaKey: idea.ideaKey, ideaText: idea.content, taskId });
-            const existingAppId = this.ideaKeyToAppId.get(idea.ideaKey);
-            if (existingAppId) {
-              const currentStatus = this.activeApps.get(existingAppId)?.status;
-              if (currentStatus === 'running') {
-                logger.info(`应用 ${existingAppId} 正在运行，将在迭代完成后自动重启`, { taskId });
-                restartAfterIteration = true;
-              }
-            }
           }
 
           if (!this.config?.iflow) {
@@ -598,16 +579,9 @@ class iFlowEngine extends EventEmitter {
             throw new Error('当前已移除模板兜底，请将 config.json 的 iflow.enabled 设为 true');
           }
 
-          // 使用 SessionManager 获取会话（多会话模式）
-          // 如果 SessionManager 可用，获取独立会话；否则回退到 ensureIFlowRunning
-          if (this.sessionManager) {
-            session = await this.sessionManager.getOrCreateSession(appIdForSession);
-            logger.info('已获取 iFlow 会话', { appId: appIdForSession, port: session.port });
-          } else {
-            // ✅ 仅在首次调用时启动 iFlow CLI 进程
-            // 后续任务会复用同一个进程和连接
-            await this.ensureIFlowRunning();
-          }
+          // ✅ 仅在首次调用时启动 iFlow CLI 进程
+          // 后续任务会复用同一个进程和连接
+          await this.ensureIFlowRunning();
 
           // 若该 ideaKey 对应应用正在运行，则先停止（避免 Windows 文件锁/端口冲突），迭代完成后再自动重启
           if (idea && typeof idea.ideaKey === 'string' && idea.ideaKey) {
@@ -626,41 +600,17 @@ class iFlowEngine extends EventEmitter {
           prep = this.prepareAppForIFlow(idea);
           const prompt = this.buildIFlowPrompt(prep.promptContext);
 
-          // 传入会话的 WebSocket URL（如果使用多会话模式）
-          const wsUrl = session ? session.getWsUrl() : undefined;
-
-          // 📢 发送提示词到前端流，以便溯源
-          const promptLog = `🎯 [本次迭代目标]\n${prompt}\n\n========================\n`;
-          this.emit('taskStream', {
-            taskId,
-            ideaKey: idea && typeof idea.ideaKey === 'string' ? idea.ideaKey : null,
-            appId: prep ? prep.appId : null,
-            sessionPort: session ? session.port : null,
-            type: 'log', // 使用 log 类型，使其包含在 liveByTaskId 中
-            text: promptLog
-          });
-
-          // 收集日志以便持久化
-          const accumulatedLogs = [promptLog];
-
           const { text, summary } = await runIFlowIteration({
             prompt,
             appDir: prep.stagingDir,
             config: this.config.iflow,
-            wsUrl, // 多会话模式下使用指定的 WebSocket URL
+            taskId,
             onEvent: (evt) => {
               if (!evt) return;
-
-              // 收集文本日志
-              if (evt.type === 'log' || evt.type === 'status') {
-                accumulatedLogs.push(evt.text ? evt.text + '\n' : '');
-              }
-
               this.emit('taskStream', {
                 taskId,
                 ideaKey: idea && typeof idea.ideaKey === 'string' ? idea.ideaKey : null,
                 appId: prep ? prep.appId : null,
-                sessionPort: session ? session.port : null, // 增加会话端口信息
                 ...evt
               });
             }
@@ -709,12 +659,6 @@ class iFlowEngine extends EventEmitter {
             });
           }
           resolve(result);
-
-          // 释放会话（多会话模式）
-          if (session && this.sessionManager) {
-            this.sessionManager.releaseSession(appIdForSession);
-            logger.info('已释放 iFlow 会话', { appId: appIdForSession, port: session.port });
-          }
         } catch (error) {
           try { logIFlowFailureHint(error); } catch (hintError) {
             logger.warn('记录 iFlow 失败提示时出错', { error: hintError.message });
@@ -742,15 +686,6 @@ class iFlowEngine extends EventEmitter {
           }
 
           logger.error(`生成代码失败`, { taskId, error: error.message });
-
-          // 释放会话（多会话模式）
-          if (session && this.sessionManager) {
-            try {
-              this.sessionManager.releaseSession(appIdForSession);
-              logger.info('已释放 iFlow 会话（失败后）', { appId: appIdForSession, port: session.port });
-            } catch { }
-          }
-
           reject(new Error(`生成代码失败: ${error.message}`));
         }
       })();
@@ -945,7 +880,7 @@ class iFlowEngine extends EventEmitter {
       port = this.getAvailablePort();
       this.usedPorts.add(port);
     }
-
+    
     // 确定应用类型和名称
     let appType = 'default';
     let appName = '通用工具';
@@ -991,14 +926,14 @@ class iFlowEngine extends EventEmitter {
       appType = 'login';
       appName = '用户登录系统';
     }
-
+    
     // 生成应用文件
     this.generateAppFiles(appDir, port, combinedIdeaText, appType, appName, {
       ideaKey,
       ideaHistory: nextHistory,
       lastRevision: idea.revision || null
     });
-
+    
     return this.getAppSolution(appId, port, combinedIdeaText, appName, appType);
   }
 
@@ -1518,23 +1453,23 @@ ${content}
       }
     };
     fs.writeFileSync(path.join(appDir, 'package.json'), JSON.stringify(packageJson, null, 2));
-
+    
     // 生成 HTML
     const htmlContent = this.getHtmlTemplate(appType, idea);
     fs.writeFileSync(path.join(appDir, 'public/index.html'), htmlContent);
-
+    
     // 生成 CSS
     const cssContent = this.getCssTemplate(appType);
     fs.writeFileSync(path.join(appDir, 'public/style.css'), cssContent);
-
+    
     // 生成 JS
     const jsContent = this.getJsTemplate(appType, port);
     fs.writeFileSync(path.join(appDir, 'public/app.js'), jsContent);
-
+    
     // 生成服务器
     const serverContent = this.getServerTemplate(port, appType);
     fs.writeFileSync(path.join(appDir, 'server.js'), serverContent);
-
+    
     // 保存应用元数据
     const metadata = {
       id: path.basename(appDir),
@@ -1552,7 +1487,7 @@ ${content}
   getHtmlTemplate(appType, idea) {
     const title = this.getAppTitle(appType);
     const content = this.getAppContent(appType);
-
+    
     return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1708,7 +1643,7 @@ ${content}
         </div>
       `
     };
-
+    
     return templates[appType] || templates.default;
   }
 
@@ -2454,9 +2389,9 @@ function showInfo() {
 }
       `
     };
-
+    
     const template = templates[appType] || templates.default;
-
+    
     return `// iFlow 生成的应用前端
 ${template}
 `;
@@ -2741,7 +2676,7 @@ ${appId}/
   async startAllApps() {
     const apps = this.getAppsList();
     const results = [];
-
+    
     for (const app of apps) {
       if (app.status === 'stopped') {
         try {
@@ -2754,7 +2689,7 @@ ${appId}/
         }
       }
     }
-
+    
     return results;
   }
 
@@ -2777,17 +2712,17 @@ ${appId}/
 
   getAppsList() {
     const apps = [];
-
+    
     if (fs.existsSync(this.appsDirectory)) {
       const appDirs = fs.readdirSync(this.appsDirectory);
-
+      
       appDirs.forEach(appId => {
         if (this.isIgnoredAppDirName(appId)) {
           return;
         }
         const appDir = path.join(this.appsDirectory, appId);
         const metadataPath = path.join(appDir, 'metadata.json');
-
+        
         // 读取应用元数据
         let metadata = {
           id: appId,
@@ -2801,7 +2736,7 @@ ${appId}/
           lastRevision: null,
           lastOutputAt: null
         };
-
+        
         if (fs.existsSync(metadataPath)) {
           try {
             metadata = { ...metadata, ...JSON.parse(fs.readFileSync(metadataPath, 'utf-8')) };
@@ -2809,21 +2744,21 @@ ${appId}/
             // 使用默认元数据
           }
         }
-
+        
         // 检查运行状态
         const isRunning = this.activeApps.has(appId);
         const runningInfo = this.activeApps.get(appId);
-
+        
         let status = 'stopped';
         let startTime = null;
         let currentPort = metadata.port;
-
+        
         if (isRunning && runningInfo) {
           status = runningInfo.status;
           startTime = runningInfo.startTime;
           currentPort = runningInfo.port || metadata.port;
         }
-
+        
         apps.push({
           id: appId,
           name: metadata.name,
@@ -2841,7 +2776,7 @@ ${appId}/
         });
       });
     }
-
+    
     // 按创建时间排序（最新的在前）
     // Merge in-memory pending apps (no disk side effects)
     for (const p of this.pendingApps.values()) {

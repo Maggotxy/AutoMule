@@ -57,7 +57,7 @@ class IFlowConnectionPool extends EventEmitter {
     // 如果正在连接，等待完成
     if (this.isConnecting) {
       logger.info('等待现有连接建立...');
-      await this.waitForConnection();
+      await this.waitForConnection(config?.timeout);
       return this.client;
     }
 
@@ -85,16 +85,9 @@ class IFlowConnectionPool extends EventEmitter {
       logger.info('创建新的 iFlow 连接', { url: config.url });
       this.client = new IFlowClient(config);
 
-      const connectTimeoutMs = typeof config.connectTimeoutMs === 'number'
-        ? config.connectTimeoutMs
-        : 60000;
-
-      // 连接超时控制
-      await this.withTimeout(
-        this.client.connect(),
-        connectTimeoutMs,
-        `IFLOW_CONNECT_TIMEOUT: ${connectTimeoutMs}ms`
-      );
+      // SDK 的 timeout 选项已经控制了连接和所有操作的超时
+      // 直接调用 connect()，让 SDK 自己的超时机制生效
+      await this.client.connect();
 
       this.isConnected = true;
       this.lastActivityAt = Date.now();
@@ -119,11 +112,13 @@ class IFlowConnectionPool extends EventEmitter {
   /**
    * 等待连接建立
    */
-  async waitForConnection(timeoutMs = 30000) {
+  async waitForConnection(timeoutMs) {
+    // 使用配置的 timeout（SDK 唯一支持的超时选项），默认10分钟
+    const timeout = timeoutMs || this.connectionConfig?.timeout || 600000;
     const startTime = Date.now();
     while (this.isConnecting) {
-      if (Date.now() - startTime > timeoutMs) {
-        throw new Error('等待连接超时');
+      if (Date.now() - startTime > timeout) {
+        throw new Error(`等待连接超时: ${timeout}ms`);
       }
       await new Promise(resolve => setTimeout(resolve, 100));
     }
@@ -141,8 +136,9 @@ class IFlowConnectionPool extends EventEmitter {
       return false;
     }
 
-    // 使用配置的闲置超时（默认 15 分钟）
-    const configuredIdleTimeoutMs = this.connectionConfig?.idleTimeoutMs || 900000;
+    // 使用独立的闲置超时判断（15 分钟），与 SDK 的 timeout 选项无关
+    // SDK 的 timeout 用于操作超时，闲置超时是连接池管理策略
+    const configuredIdleTimeoutMs = 900000; // 15分钟闲置判定
     const idleTime = Date.now() - (this.lastActivityAt || 0);
 
     if (idleTime > configuredIdleTimeoutMs) {

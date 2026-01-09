@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,15 +18,8 @@
     <link rel="stylesheet" href="/css/organic.css">
 
     <style>
-        html,
-        body {
-            height: 100%;
-        }
-
-        body {
-            margin: 0;
-            overflow: hidden;
-        }
+        html, body { height: 100%; }
+        body { margin: 0; overflow: hidden; }
 
         .shell {
             position: relative;
@@ -53,32 +45,23 @@
                 "top top"
                 "center right";
         }
-
         .shell.left-collapsed.preview-mode {
             grid-template-columns: minmax(520px, 1fr) clamp(640px, 62vw, 1400px);
         }
-
         .shell.right-collapsed {
             grid-template-columns: clamp(260px, 22vw, 320px) 1fr;
             grid-template-areas:
                 "top top"
                 "left center";
         }
-
         .shell.left-collapsed.right-collapsed {
             grid-template-columns: 1fr;
             grid-template-areas:
                 "top"
                 "center";
         }
-
-        .shell.left-collapsed .left {
-            display: none;
-        }
-
-        .shell.right-collapsed .right {
-            display: none;
-        }
+        .shell.left-collapsed .left { display: none; }
+        .shell.right-collapsed .right { display: none; }
 
         .topbar {
             grid-area: top;
@@ -88,26 +71,18 @@
             padding: 8px 12px;
             border-radius: 14px;
             background: #fff;
-            border: 1px solid rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0,0,0,0.06);
             z-index: 5;
         }
 
-        .top-left,
-        .top-center,
-        .top-right {
+        .top-left, .top-center, .top-right {
             display: flex;
             align-items: center;
             gap: 10px;
             min-width: 0;
         }
-
-        .top-center {
-            justify-content: center;
-        }
-
-        .top-right {
-            justify-content: flex-end;
-        }
+        .top-center { justify-content: center; }
+        .top-right { justify-content: flex-end; }
 
         .topbar .brand {
             display: flex;
@@ -117,9 +92,7 @@
             white-space: nowrap;
         }
 
-        .topbar .brand i {
-            color: var(--primary);
-        }
+        .topbar .brand i { color: var(--primary); }
 
         .btn-icon {
             width: 34px;
@@ -128,24 +101,17 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(0,0,0,0.06);
+            background: rgba(0,0,0,0.03);
             color: inherit;
             cursor: pointer;
         }
-
-        .btn-icon:hover {
-            background: rgba(0, 0, 0, 0.05);
-        }
-
-        .btn-icon:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .btn-icon:hover { background: rgba(0,0,0,0.05); }
+        .btn-icon:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .pane {
             background: #fff;
-            border: 1px solid rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0,0,0,0.06);
             border-radius: 14px;
             overflow: hidden;
             display: flex;
@@ -158,7 +124,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 12px 14px;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
         }
 
         .pane-title {
@@ -168,29 +134,13 @@
             font-weight: 700;
         }
 
-        .pane-body {
-            padding: 12px;
-            overflow: auto;
-            min-height: 0;
-            flex: 1 1 auto;
-        }
-
+        .pane-body { padding: 12px; overflow: auto; min-height: 0; flex: 1 1 auto; }
         /* Center chat should not scroll as a whole; only the stream scrolls */
-        .center .pane-body {
-            overflow: hidden;
-        }
+        .center .pane-body { overflow: hidden; }
 
-        .left {
-            grid-area: left;
-        }
-
-        .center {
-            grid-area: center;
-        }
-
-        .right {
-            grid-area: right;
-        }
+        .left { grid-area: left; }
+        .center { grid-area: center; }
+        .right { grid-area: right; }
 
         .search {
             display: flex;
@@ -198,11 +148,10 @@
             align-items: center;
             padding: 10px 12px;
             border-radius: 12px;
-            background: rgba(0, 0, 0, 0.03);
-            border: 1px solid rgba(0, 0, 0, 0.06);
+            background: rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.06);
             margin-bottom: 10px;
         }
-
         .search input {
             border: none;
             outline: none;
@@ -211,38 +160,17 @@
             font-size: 14px;
         }
 
-        .app-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
+        .app-list { display: flex; flex-direction: column; gap: 10px; }
         .app-row {
             padding: 10px 12px;
             border-radius: 12px;
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(0,0,0,0.06);
+            background: rgba(255,255,255,0.7);
             cursor: pointer;
         }
-
-        .app-row.active {
-            border-color: rgba(0, 0, 0, 0.18);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
-        }
-
-        .app-row .name {
-            font-weight: 700;
-        }
-
-        .app-row .meta {
-            display: flex;
-            gap: 10px;
-            font-size: 12px;
-            color: rgba(0, 0, 0, 0.62);
-            margin-top: 4px;
-            flex-wrap: wrap;
-        }
-
+        .app-row.active { border-color: rgba(0,0,0,0.18); box-shadow: 0 10px 25px rgba(0,0,0,0.06); }
+        .app-row .name { font-weight: 700; }
+        .app-row .meta { display: flex; gap: 10px; font-size: 12px; color: rgba(0,0,0,0.62); margin-top: 4px; flex-wrap: wrap; }
         .badge {
             display: inline-flex;
             align-items: center;
@@ -250,21 +178,12 @@
             padding: 3px 8px;
             border-radius: 999px;
             font-size: 12px;
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            background: rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(0,0,0,0.06);
+            background: rgba(0,0,0,0.03);
         }
-
-        .badge.running {
-            background: rgba(46, 204, 113, 0.12);
-        }
-
-        .badge.stopped {
-            background: rgba(231, 76, 60, 0.10);
-        }
-
-        .badge.starting {
-            background: rgba(241, 196, 15, 0.14);
-        }
+        .badge.running { background: rgba(46, 204, 113, 0.12); }
+        .badge.stopped { background: rgba(231, 76, 60, 0.10); }
+        .badge.starting { background: rgba(241, 196, 15, 0.14); }
 
         .chat {
             display: flex;
@@ -272,7 +191,6 @@
             height: 100%;
             min-height: 0;
         }
-
         .chat-stream {
             flex: 1;
             overflow: auto;
@@ -285,7 +203,6 @@
             gap: 8px;
             align-items: center;
         }
-
         .msg-row {
             display: flex;
             width: min(900px, 100%);
@@ -293,22 +210,15 @@
             box-sizing: border-box;
             align-items: flex-start;
         }
-
-        .msg-row.user {
-            justify-content: flex-end;
-        }
-
-        .msg-row.assistant {
-            justify-content: flex-start;
-        }
-
+        .msg-row.user { justify-content: flex-end; }
+        .msg-row.assistant { justify-content: flex-start; }
         .msg {
             width: fit-content;
             max-width: 720px;
             padding: 10px 12px;
             border-radius: 12px;
-            border: 1px solid rgba(0, 0, 0, 0.06);
-            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0,0,0,0.06);
+            background: rgba(255,255,255,0.8);
             margin: 0;
             display: flex;
             flex-direction: column;
@@ -318,23 +228,10 @@
             font-size: 13px;
             line-height: 1.55;
         }
-
-        .msg.user {
-            background: rgba(46, 204, 113, 0.10);
-        }
-
-        .msg .label {
-            font-size: 10px;
-            color: rgba(0, 0, 0, 0.58);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .msg .msg-text {
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
+        .msg.user { background: rgba(46, 204, 113, 0.10); }
+        .msg.assistant { }
+        .msg .label { font-size: 10px; color: rgba(0,0,0,0.58); display: flex; align-items: center; gap: 6px; }
+        .msg .msg-text { white-space: pre-wrap; word-break: break-word; }
 
         .chat-input {
             display: flex;
@@ -347,113 +244,73 @@
             padding: 0 14px 14px;
             box-sizing: border-box;
         }
-
-        .input-wrap {
-            position: relative;
-        }
-
+        .input-wrap { position: relative; }
         .chat-input textarea {
             width: 100%;
             resize: none;
             height: 76px;
             border-radius: 12px;
             padding: 10px 12px;
-            border: 1px solid rgba(0, 0, 0, 0.10);
-            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(0,0,0,0.10);
+            background: rgba(255,255,255,0.8);
             outline: none;
             text-align: left;
         }
-
         .placeholder-overlay {
             position: absolute;
             inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: rgba(0, 0, 0, 0.35);
+            color: rgba(0,0,0,0.35);
             font-size: 14px;
             pointer-events: none;
             user-select: none;
             padding: 0 16px;
             text-align: center;
         }
-
-        .input-wrap.has-text .placeholder-overlay {
-            display: none;
-        }
-
-        .input-wrap.is-focus .placeholder-overlay {
-            display: none;
-        }
-
+        .input-wrap.has-text .placeholder-overlay { display: none; }
+        .input-wrap.is-focus .placeholder-overlay { display: none; }
         .input-below {
             display: flex;
             justify-content: space-between;
             gap: 8px;
             align-items: center;
         }
-
         .input-actions {
             display: flex;
             gap: 8px;
             align-items: center;
         }
-
         .btn-primary {
             height: 34px;
             padding: 0 14px;
             border-radius: 10px;
-            border: 1px solid rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0,0,0,0.06);
             background: rgba(46, 204, 113, 0.16);
             color: inherit;
             font-weight: 700;
             cursor: pointer;
         }
+        .btn-primary:hover { background: rgba(46, 204, 113, 0.22); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        .btn-primary:hover {
-            background: rgba(46, 204, 113, 0.22);
-        }
-
-        .btn-primary:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .center-empty .chat {
-            justify-content: center;
-        }
-
-        .center-empty .chat-stream {
-            display: none;
-        }
-
-        .center-empty .chat-input {
-            margin-top: 0;
-            max-width: 760px;
-            width: 100%;
-            align-self: center;
-        }
-
-        .center-empty .chat-hint {
-            display: none;
-        }
-
-        .center-empty textarea {
-            height: 140px;
-        }
-
+        .center-empty .chat { justify-content: center; }
+        .center-empty .chat-stream { display: none; }
+        .center-empty .chat-input { margin-top: 0; max-width: 760px; width: 100%; align-self: center; }
+        .center-empty .chat-hint { display: none; }
+        .center-empty textarea { height: 140px; }
         /* empty note removed */
 
         .right-tabs {
             display: flex;
             gap: 8px;
             margin-bottom: 10px;
-            background: rgba(0, 0, 0, 0.03);
-            border: 1px solid rgba(0, 0, 0, 0.06);
+            background: rgba(0,0,0,0.03);
+            border: 1px solid rgba(0,0,0,0.06);
             border-radius: 12px;
             padding: 6px;
         }
-
         .tab-btn {
             flex: 1;
             border: 1px solid transparent;
@@ -464,26 +321,13 @@
             cursor: pointer;
             font-size: 13px;
         }
-
         .tab-btn.active {
             background: #fff;
-            border-color: rgba(0, 0, 0, 0.08);
-            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.06);
+            border-color: rgba(0,0,0,0.08);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.06);
         }
-
-        .right-view {
-            display: none;
-            min-height: 0;
-            flex: 1 1 auto;
-        }
-
-        .right-view.active {
-            display: flex;
-            flex-direction: column;
-            min-height: 0;
-            flex: 1 1 auto;
-        }
-
+        .right-view { display: none; min-height: 0; flex: 1 1 auto; }
+        .right-view.active { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
         .right-subhead {
             display: flex;
             align-items: center;
@@ -491,26 +335,14 @@
             gap: 10px;
             margin-bottom: 10px;
         }
-
         .tree {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
             font-size: 12px;
             line-height: 1.5;
         }
-
-        .tree-item {
-            padding: 4px 6px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        .tree-item:hover {
-            background: rgba(0, 0, 0, 0.04);
-        }
-
-        .tree-item.active {
-            background: rgba(0, 0, 0, 0.06);
-        }
+        .tree-item { padding: 4px 6px; border-radius: 8px; cursor: pointer; }
+        .tree-item:hover { background: rgba(0,0,0,0.04); }
+        .tree-item.active { background: rgba(0,0,0,0.06); }
 
         .file-view {
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
@@ -519,14 +351,14 @@
             overflow: auto;
             padding: 12px;
             border-radius: 12px;
-            background: rgba(0, 0, 0, 0.04);
-            border: 1px solid rgba(0, 0, 0, 0.06);
+            background: rgba(0,0,0,0.04);
+            border: 1px solid rgba(0,0,0,0.06);
         }
 
         .preview-frame {
             width: 100%;
             height: 100%;
-            border: 1px solid rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0,0,0,0.06);
             border-radius: 12px;
             background: white;
         }
@@ -538,49 +370,23 @@
             gap: 10px;
             margin-top: 10px;
         }
-
-        .chat-footer .left-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .chat-footer .right-group {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-            justify-content: flex-end;
-        }
+        .chat-footer .left-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .chat-footer .right-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 
         @media (max-width: 1280px) {
-            .shell {
-                grid-template-columns: 300px 1fr;
-                grid-template-areas: "top top" "left center";
-            }
-
-            .right {
-                display: none;
-            }
+            .shell { grid-template-columns: 300px 1fr; grid-template-areas: "top top" "left center"; }
+            .right { display: none; }
         }
     </style>
 </head>
-
 <body>
     <div class="shell" id="shell">
         <div class="topbar">
             <div class="top-left">
-                <button class="btn-icon" onclick="toggleLeftPane()" title="历史/应用"><i
-                        class="bi bi-layout-sidebar-inset"></i></button>
+                <button class="btn-icon" onclick="toggleLeftPane()" title="历史/应用"><i class="bi bi-layout-sidebar-inset"></i></button>
                 <div class="brand">
                     <i class="bi bi-cpu"></i>
-                    🐂 赛博牛马工作站
-                </div>
-                <div style="font-size:12px; color:rgba(0,0,0,0.5); display:flex; align-items:center; gap:6px;">
-                    <span class="badge" style="background:rgba(0,0,0,0.05); color:rgba(0,0,0,0.6);">Cyber NiuMa
-                        Station</span>
-                    <span>24h 不间断打工</span>
+                    iFlow Continuous Dev
                 </div>
             </div>
 
@@ -589,23 +395,19 @@
             </div>
 
             <div class="top-right">
-                <span class="badge" id="systemStatusBadge"><i class="bi bi-broadcast"></i><span
-                        id="systemStatusText">在线</span></span>
-                <button class="btn-icon" onclick="refreshAll()" title="刷新"><i
-                        class="bi bi-arrow-clockwise"></i></button>
-                <button class="btn-icon" onclick="toggleRightPane()" title="项目/预览"><i
-                        class="bi bi-layout-sidebar-inset-reverse"></i></button>
+                <span class="badge" id="systemStatusBadge"><i class="bi bi-broadcast"></i><span id="systemStatusText">在线</span></span>
+                <button class="btn-icon" onclick="refreshAll()" title="刷新"><i class="bi bi-arrow-clockwise"></i></button>
+                <button class="btn-icon" onclick="toggleRightPane()" title="项目/预览"><i class="bi bi-layout-sidebar-inset-reverse"></i></button>
             </div>
         </div>
 
-        <!-- Left: history/apps -->
-        <div class="pane left">
+	        <!-- Left: history/apps -->
+	        <div class="pane left">
             <div class="pane-header">
                 <div class="pane-title"><i class="bi bi-clock-history"></i> 历史 / 应用</div>
                 <div style="display:flex; gap:8px; align-items:center;">
                     <button class="btn-icon" onclick="newApp()" title="新建应用"><i class="bi bi-plus-lg"></i></button>
-                    <button class="btn-icon" onclick="refreshApps()" title="刷新应用"><i
-                            class="bi bi-arrow-repeat"></i></button>
+                    <button class="btn-icon" onclick="refreshApps()" title="刷新应用"><i class="bi bi-arrow-repeat"></i></button>
                 </div>
             </div>
             <div class="pane-body">
@@ -615,41 +417,6 @@
                 </div>
                 <div id="apps" class="app-list">
                     <div class="text-center py-5 text-muted">加载中...</div>
-                </div>
-
-                <!-- 牛马工作站控制面板 -->
-                <div id="niuMaStationPanel" class="auto-iterate-panel"
-                    style="margin-top: 16px; padding: 12px; border-radius: 12px; background: rgba(241, 196, 15, 0.08); border: 1px solid rgba(241, 196, 15, 0.2);">
-
-                    <!-- 工作站统计 -->
-                    <div
-                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
-                        <span style="font-weight: 700; display: flex; align-items: center; gap: 6px;">
-                            <span style="font-size: 1.1em;">🏭</span> 赛博牛马工作站
-                        </span>
-                        <div id="stationStats" style="font-size: 11px; color: rgba(0,0,0,0.6);">
-                            🔥 <strong id="workingCount">0</strong> |
-                            📊 <strong id="totalIterations">0</strong>
-                        </div>
-                    </div>
-
-                    <!-- 想法生成器控制 -->
-                    <div
-                        style="display: flex; align-items: center; justify-content: space-between; padding: 8px; background: rgba(155, 89, 182, 0.1); border-radius: 8px;">
-                        <span style="font-size: 12px; display: flex; align-items: center; gap: 4px;">
-                            🧠 赛博大脑 (自动想点子)
-                            <span id="generatorStatusBadge"
-                                style="font-size: 10px; padding: 2px 6px; border-radius: 4px; background: rgba(149, 165, 166, 0.3);">停止</span>
-                        </span>
-                        <button id="toggleGeneratorBtn" class="btn-icon" onclick="toggleIdeaGenerator()"
-                            style="font-size: 11px; padding: 3px 8px; background: rgba(155, 89, 182, 0.2);">
-                            启动
-                        </button>
-                    </div>
-
-                    <div style="font-size: 10px; color: rgba(0,0,0,0.4); margin-top: 8px; text-align: center;">
-                        💡 点击每个应用的「开始搬砖/摸鱼」控制牛马
-                    </div>
                 </div>
             </div>
         </div>
@@ -667,14 +434,11 @@
                     </div>
                     <div class="input-below">
                         <div class="input-actions">
-                            <button class="btn-icon" id="clearBtn" onclick="clearInput()" title="清空"><i
-                                    class="bi bi-eraser"></i></button>
+                            <button class="btn-icon" id="clearBtn" onclick="clearInput()" title="清空"><i class="bi bi-eraser"></i></button>
                         </div>
                         <div class="input-actions">
-                            <button class="btn-icon" onclick="toggleRun()" id="runBtn" title="启动/停止"><i
-                                    class="bi bi-play-fill"></i></button>
-                            <button class="btn-icon" onclick="openPreviewTab()" id="openTabBtn" title="打开预览"><i
-                                    class="bi bi-box-arrow-up-right"></i></button>
+                            <button class="btn-icon" onclick="toggleRun()" id="runBtn" title="启动/停止"><i class="bi bi-play-fill"></i></button>
+                            <button class="btn-icon" onclick="openPreviewTab()" id="openTabBtn" title="打开预览"><i class="bi bi-box-arrow-up-right"></i></button>
                             <button class="btn-primary" id="sendBtn" onclick="sendIteration()">发送</button>
                         </div>
                     </div>
@@ -682,12 +446,12 @@
             </div>
         </div>
 
-        <!-- Right: tree + preview -->
-        <div class="pane right">
-            <div class="pane-header">
-                <div class="pane-title"></div>
-                <div></div>
-            </div>
+	        <!-- Right: tree + preview -->
+	        <div class="pane right">
+	            <div class="pane-header">
+	                <div class="pane-title"></div>
+	                <div></div>
+	            </div>
             <div class="pane-body" style="display:flex; flex-direction:column; min-height:0;">
                 <div class="right-tabs">
                     <button class="tab-btn active" id="tabTree" onclick="setRightTab('tree')">目录</button>
@@ -695,10 +459,10 @@
                 </div>
 
                 <div id="rightTreeView" class="right-view active">
-                    <div class="right-subhead">
+                <div class="right-subhead">
                         <span class="badge" id="projectPath"></span>
                         <span class="text-muted" style="font-size:12px;"></span>
-                    </div>
+                </div>
                     <div id="tree" class="tree" style="overflow:auto; min-height:0;"></div>
                     <div id="fileView" class="file-view" style="margin-top:10px; display:none;"></div>
                 </div>
@@ -719,5 +483,4 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/app.js"></script>
 </body>
-
 </html>
