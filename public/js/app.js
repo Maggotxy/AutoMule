@@ -269,6 +269,51 @@ class ManusUI {
         }
     }
 
+    async refreshNiuMaStation() {
+        try {
+            const res = await fetch('/api/niuma-station');
+            const data = await res.json();
+            if (data.success) {
+                if (data.station) {
+                    this.niuMaStation = data.station;
+                    this.updateStationUI();
+                }
+                if (data.allNiuma) {
+                    this.niurnaStates = data.allNiuma;
+                    // Only re-render if we have meaningful changes to avoid flickering, 
+                    // or just update the badges directly if possible. 
+                    // For now, simple re-render to ensure badges update.
+                    this.renderApps();
+                }
+                if (data.generator) {
+                    this.updateIdeaGeneratorUI(data.generator);
+                }
+            }
+        } catch (err) {
+            console.warn('刷新牛马工作站状态失败:', err);
+        }
+    }
+
+    updateStationUI() {
+        const workingCount = document.getElementById('workingCount');
+        const totalIterations = document.getElementById('totalIterations');
+        if (workingCount) workingCount.textContent = this.niuMaStation.workingCount || 0;
+        if (totalIterations) totalIterations.textContent = this.niuMaStation.totalIterations || 0;
+    }
+
+    updateIdeaGeneratorUI(status) {
+        const badge = document.getElementById('generatorStatusBadge');
+        const btn = document.getElementById('toggleGeneratorBtn');
+        if (badge && btn) {
+            const isRunning = status.status === 'running';
+            badge.textContent = isRunning ? '运行中' : '停止';
+            badge.style.background = isRunning ? 'rgba(46, 204, 113, 0.2)' : 'rgba(149, 165, 166, 0.3)';
+            badge.style.color = isRunning ? '#2ecc71' : '#95a5a6';
+            btn.textContent = isRunning ? '停止' : '启动';
+            btn.style.background = isRunning ? 'rgba(231, 76, 60, 0.2)' : 'rgba(155, 89, 182, 0.2)';
+        }
+    }
+
     renderAppsError(msg) {
         const container = document.getElementById('apps');
         if (!container) return;

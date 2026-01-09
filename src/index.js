@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const IdeaCapturer = require('./ideaCapturer/ideaCapturer');
+const IdeaGenerator = require('./ideaGenerator');
 const TaskQueue = require('./taskQueue/taskQueue');
 const iFlowEngine = require('./iflowEngine/iflowEngine');
 const CodeRepository = require('./codeRepository/codeRepository');
@@ -87,6 +88,7 @@ class ContinuousDevSystem {
 
   initializeComponents() {
     this.ideaCapturer = new IdeaCapturer(this.config);
+    this.ideaGenerator = new IdeaGenerator(this.config);
     this.taskQueue = new TaskQueue(this.config);
     this.iflowEngine = new iFlowEngine(this.config);
     this.codeRepository = new CodeRepository(this.config);
