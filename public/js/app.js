@@ -56,10 +56,24 @@ class ManusUI {
         // 全局暴露，供 index.html 按钮调用
         window.ui = this; // Expose ui instance globally
         window.newApp = () => this.createNewApp();
-        window.toggleLeftPane = () => this.toggleLeftPane(); // Use existing toggleLeftPane
+        window.toggleLeftPane = () => this.toggleLeftPane();
+        window.toggleRightPane = () => this.toggleRightPane();
         window.toggleNiuMa = (appId, enable) => this.toggleNiuMa(appId, enable);
         window.setNiuMaFocus = (appId, dimension) => this.setNiuMaFocus(appId, dimension);
         window.toggleIdeaGenerator = () => this.toggleIdeaGenerator();
+
+        // 其他全局绑定
+        window.refreshAll = () => this.refreshAll();
+        window.refreshApps = () => this.refreshApps();
+        window.filterApps = () => this.filterApps();
+        window.selectApp = (id) => this.selectApp(id);
+        window.sendIteration = () => this.sendIteration();
+        window.clearInput = () => this.clearInput();
+        window.refreshProject = () => this.refreshProject();
+        window.openFile = (p) => this.openFile(p);
+        window.toggleRun = () => this.toggleRun();
+        window.openPreviewTab = () => this.openPreviewTab();
+        window.setRightTab = (t) => this.setRightTab(t);
     }
 
     formatElapsed(ms) {
@@ -1092,12 +1106,58 @@ class ManusUI {
         div.textContent = String(text ?? '');
         return div.innerHTML;
     }
+    async toggleNiuMa(appId, start) {
+        try {
+            const action = start ? 'start' : 'stop';
+            const res = await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate/${action}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                this.refreshNiuMaStation(); // 触发刷新
+            } else {
+                alert('操作失败: ' + (data.error || '未知错误'));
+            }
+        } catch (e) {
+            console.warn(e);
+            alert('网络错误，请检查控制台');
+        }
+    }
+
+    async setNiuMaFocus(appId, dimension) {
+        try {
+            await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate/focus`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dimension })
+            });
+            this.refreshNiuMaStation();
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+
+    async toggleIdeaGenerator() {
+        try {
+            const btn = document.getElementById('toggleGeneratorBtn');
+            let action = 'start';
+            if (btn && btn.textContent.trim() === '停止') {
+                action = 'stop';
+            }
+            const res = await fetch(`/api/idea-generator/${action}`, { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                this.refreshNiuMaStation();
+            }
+        } catch (e) {
+            console.warn(e);
+        }
+    }
 }
 
 let ui;
 document.addEventListener('DOMContentLoaded', () => {
     ui = new ManusUI();
 });
+
 
 // Global bindings
 window.refreshAll = () => ui.refreshAll();
@@ -1119,55 +1179,14 @@ window.toggleRightPane = () => ui.toggleRightPane();
 // 🐂 赛博牛马工作站 全局控制函数
 // ==========================================
 
-async function toggleNiuMa(appId, start) {
-    try {
-        const action = start ? 'start' : 'stop'; // 修正 logic
-        const res = await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate/${action}`, { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-            if (ui) ui.refreshNiuMaStation(); // 触发刷新
-        } else {
-            alert('操作失败: ' + (data.error || '未知错误'));
-        }
-    } catch (e) {
-        console.warn(e);
-        alert('网络错误，请检查控制台');
-    }
-}
-
-async function setNiuMaFocus(appId, dimension) {
-    try {
-        await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate/focus`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dimension })
-        });
-        if (ui) ui.refreshNiuMaStation();
-    } catch (e) {
-        console.warn(e);
-    }
-}
-
-async function toggleIdeaGenerator() {
-    try {
-        // 获取当前按钮状态推断动作，或者直接查 ui 状态
-        const btn = document.getElementById('toggleGeneratorBtn');
-        let action = 'start';
-        if (btn && btn.textContent.trim() === '停止') {
-            action = 'stop';
-        }
-        const res = await fetch(`/api/idea-generator/${action}`, { method: 'POST' });
-        const data = await res.json();
-        if (data.success) {
-            if (ui) ui.refreshNiuMaStation();
-        }
-    } catch (e) {
-        console.warn(e);
-    }
-}
-
 // 绑定全局变量，防止 HTML onclick 找不到
-window.toggleNiuMa = toggleNiuMa;
-window.setNiuMaFocus = setNiuMaFocus;
-window.toggleIdeaGenerator = toggleIdeaGenerator;
+window.toggleNiuMa = (appId, start) => ui.toggleNiuMa(appId, start);
+window.setNiuMaFocus = (appId, dimension) => ui.setNiuMaFocus(appId, dimension);
+window.toggleIdeaGenerator = () => ui.toggleIdeaGenerator();
 
+
+// 移除底部的重复定义，因为现在已经作为类方法存在，并且在 constructor 中绑定了。
+// 保留必要的全局绑定声明（尽管 constructor 中已经做了一次，这里做兜底也不坏，但必须确保 ui 存在）
+// 为了一致性，这里仅保留注释或删除。
+
+/* Global bindings are handled in ManusUI.init() */
