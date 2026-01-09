@@ -130,29 +130,43 @@ async function runIFlowQuery({ prompt, appDir, config }) {
 module.exports = {
   listContextFiles,
   runIFlowQuery,
-  runIFlowIteration: async ({ prompt, appDir, config, onEvent, taskId }) => {
+  runIFlowIteration: async ({ prompt, appDir, config, onEvent, taskId, wsUrl }) => {
     const sdk = await loadSdk();
-    const { MessageType } = sdk;
+    const { IFlowClient, MessageType } = sdk;
     const { getConnectionPool } = require('./IFlowConnectionPool');
     const connectionPool = getConnectionPool();
 
-    const files = listContextFiles(appDir);
-    const options = buildSdkOptions({ appDir, config });
+    // 传入 wsUrl 以支持多会话（如果提供了 wsUrl，则 options.url 会被覆盖）
+    const options = buildSdkOptions({ appDir, config, wsUrl });
 
     const chunks = [];
     const plans = [];
     const toolCalls = [];
     const errors = [];
 
-    // 标记任务开始
-    connectionPool.taskStart();
+    // 如果指定了 wsUrl，说明是独立会话，直接直连不走单例连接池
+    // 或者是 SessionManager 管理的会话
+    let client;
+    if (wsUrl) {
+      client = new IFlowClient(options);
+    } else {
+      // 否则走连接池（兼容旧模式）
+      connectionPool.taskStart();
+    }
 
     try {
       const sendTimeoutMs = typeof config.sendTimeoutMs === 'number' ? config.sendTimeoutMs : 120000;
 
-      // 使用连接池获取连接（自动处理重连）
-      if (onEvent) onEvent({ type: 'status', text: '获取 iFlow 连接…' });
-      const client = await connectionPool.getConnection(options);
+      if (wsUrl) {
+        // 独立连接模式
+        if (onEvent) onEvent({ type: 'status', text: '连接独立 iFlow 进程…' });
+        const connectTimeoutMs = typeof config.connectTimeoutMs === 'number' ? config.connectTimeoutMs : 30000;
+        await withTimeout(client.connect(), connectTimeoutMs, `IFLOW_CONNECT_TIMEOUT: ${connectTimeoutMs}ms`);
+      } else {
+        // 连接池模式
+        if (onEvent) onEvent({ type: 'status', text: '获取 iFlow 连接…' });
+        client = await connectionPool.getConnection(options);
+      }
 
       if (onEvent) onEvent({ type: 'status', text: '发送任务…' });
       await withTimeout(client.sendMessage(prompt, files), sendTimeoutMs, `IFLOW_SEND_TIMEOUT: ${sendTimeoutMs}ms`);

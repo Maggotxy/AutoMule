@@ -15,6 +15,17 @@ class ManusUI {
         this.isAutoSelecting = false;
         this.liveByTaskId = new Map(); // taskId -> text
         this.taskActivityByTaskId = new Map(); // taskId -> { toolCallCount, lastActivityAt }
+
+        // 牛马工作站状态
+        this.niuMaStation = {
+            workingCount: 0,
+            totalIterations: 0,
+            generatorEnabled: false
+        };
+        this.niurnaStates = {}; // { appId: { isAuto: boolean, ... } }
+        this.stationStats = {}; // Placeholder for station statistics
+        this.generatorStatus = {}; // Placeholder for generator status
+
         this.refreshConversationTimer = null;
         this.refreshAppsTimer = null;
         this.elapsedTicker = null;
@@ -30,6 +41,25 @@ class ManusUI {
         this.refreshAll();
         this.bindInputUI();
         this.startElapsedTicker();
+
+        // 绑定快捷键
+        document.addEventListener('keydown', (e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                this.sendIteration(); // Assuming sendIteration is the submit function
+            }
+        });
+
+        // 启动牛马工作站刷新循环
+        this.refreshNiuMaStation();
+        setInterval(() => this.refreshNiuMaStation(), 3000); // 每3秒刷新一次状态
+
+        // 全局暴露，供 index.html 按钮调用
+        window.ui = this; // Expose ui instance globally
+        window.newApp = () => this.createNewApp();
+        window.toggleLeftPane = () => this.toggleLeftPane(); // Use existing toggleLeftPane
+        window.toggleNiuMa = (appId, enable) => this.toggleNiuMa(appId, enable);
+        window.setNiuMaFocus = (appId, dimension) => this.setNiuMaFocus(appId, dimension);
+        window.toggleIdeaGenerator = () => this.toggleIdeaGenerator();
     }
 
     formatElapsed(ms) {
@@ -251,7 +281,6 @@ class ManusUI {
 
         if (!this.apps.length) {
             container.innerHTML = `<div class="text-center py-5 text-muted">暂无应用</div>`;
-            // no-op
             return;
         }
 
@@ -261,11 +290,14 @@ class ManusUI {
             return !search || hay.includes(search);
         });
 
-        container.innerHTML = filtered.map(app => {
+        const list = document.createElement('div');
+        list.className = 'app-list';
+
+        filtered.forEach(app => {
             const statusClass = app.status || 'stopped';
             const statusText = statusClass === 'running' ? '运行中'
                 : statusClass === 'starting' ? '启动中'
-                : '已停止';
+                    : '已停止';
             const displayStatusClass = statusClass === 'creating' ? 'starting' : statusClass;
             const displayStatusText = statusClass === 'creating' ? '生成中' : statusText;
             const displayStatusTextSafe = statusClass === 'creating' ? '\u751f\u6210\u4e2d' : statusText;
@@ -279,25 +311,61 @@ class ManusUI {
             const ideaFile = app.ideaKey ? String(app.ideaKey).split(/[/\\\\]/).pop() : '';
 
             const isActive = this.activeApp && this.activeApp.id === app.id;
-            return `
-                <div class="app-row ${isActive ? 'active' : ''}" onclick="selectApp('${this.escapeHtml(app.id)}')">
-                    <div class="name">${this.escapeHtml(app.name || app.id)}</div>
-                    <div class="meta">
-                        ${badge}
-                        <span class="badge"><i class="bi bi-tag"></i>${this.escapeHtml(app.type || 'default')}</span>
-                        ${app.port ? `<span class="badge"><i class="bi bi-router"></i>${app.port}</span>` : ''}
-                        ${ideaFile ? `<span class="badge"><i class="bi bi-file-earmark-text"></i>${this.escapeHtml(ideaFile)}</span>` : ''}
-                    </div>
+            const niumaState = this.niurnaStates[app.id] || {};
+            const isAuto = niumaState.isAuto; // 是否正在自动搬砖
+
+            const div = document.createElement('div');
+            div.className = `app-row ${isActive ? 'active' : ''} ${isAuto ? 'niuma-working' : ''}`;
+            div.onclick = () => this.selectApp(app.id);
+
+            let statusBadge = '';
+            if (isAuto) {
+                statusBadge = `<span class="badge" style="background:rgba(230, 126, 34, 0.2); color:#e67e22; font-size:10px;">搬砖中 ${niumaState.iterationCount || 0}</span>`;
+            }
+
+            // Render NiuMa controls
+            const niumaControls = `
+                <div class="niuma-controls" style="margin-top:6px; display:flex; gap:4px; align-items:center;">
+                    <button class="btn-xs ${isAuto ? 'btn-stop' : 'btn-start'}"
+                        onclick="event.stopPropagation(); ui.toggleNiuMa('${app.id}', ${!isAuto})"
+                        title="${isAuto ? '停止自动迭代' : '启动自动迭代'}">
+                        ${isAuto ? '☕ 摸鱼' : '🐂 搬砖'}
+                    </button>
+                    <select class="select-xs" onclick="event.stopPropagation()" onchange="ui.setNiuMaFocus('${app.id}', this.value)" style="max-width: 60px;">
+                        <option value="balanced" ${niumaState.focusDimension === 'balanced' ? 'selected' : ''}>⚖️ 均衡</option>
+                        <option value="ui" ${niumaState.focusDimension === 'ui' ? 'selected' : ''}>🎨 颜值</option>
+                        <option value="logic" ${niumaState.focusDimension === 'logic' ? 'selected' : ''}>⚡ 效率</option>
+                        <option value="robustness" ${niumaState.focusDimension === 'robustness' ? 'selected' : ''}>🛡️ 稳得一匹</option>
+                    </select>
                 </div>
             `;
-        }).join('');
+
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="app-name">${this.escapeHtml(app.name || app.id)}</span>
+                    <span class="app-time" style="font-size:10px; opacity:0.6;">${new Date(app.createdAt || app.updatedAt).toLocaleTimeString()}</span>
+                </div>
+                <div style="font-size:11px; color:#555; margin-top:2px; display:flex; align-items:center; gap:6px;">
+                    ${badge}
+                    ${statusBadge}
+                    <span class="badge"><i class="bi bi-tag"></i>${this.escapeHtml(app.type || 'default')}</span>
+                    ${app.port ? `<span class="badge"><i class="bi bi-router"></i>${app.port}</span>` : ''}
+                    ${ideaFile ? `<span class="badge"><i class="bi bi-file-earmark-text"></i>${this.escapeHtml(ideaFile)}</span>` : ''}
+                    <span class="text-truncate" style="max-width: 100px;">${app.metadata ? this.escapeHtml(app.metadata.description || '无描述') : '无描述'}</span>
+                </div>
+                ${niumaControls}
+            `;
+            list.appendChild(div);
+        });
+        container.innerHTML = ''; // Clear existing content
+        container.appendChild(list);
     }
 
     filterApps() {
         this.renderApps();
     }
 
-    startNewApp() {
+    createNewApp() {
         this.newAppMode = true;
         this.activeApp = null;
         this.activeIdeaKey = null;
@@ -576,11 +644,12 @@ class ManusUI {
         const appHistory = this.activeApp && Array.isArray(this.activeApp.ideaHistory) ? this.activeApp.ideaHistory : [];
 
         const messages = [];
+        const seenTaskIds = new Set();
+        const seenRevisions = new Set();
+
         if (appHistory.length) {
             // 只展示最近 20 轮
             const recent = appHistory.slice(-20);
-            const seenTaskIds = new Set();
-            const seenRevisions = new Set();
             for (const h of recent) {
                 const text = (h && typeof h.text === 'string') ? h.text : '';
                 const rev = h && h.revision != null ? String(h.revision) : '';
@@ -699,7 +768,35 @@ class ManusUI {
         }
 
         if (messages.length === 0) {
-            stream.innerHTML = `<div class="text-muted"></div>`;
+            // Welcome screen
+            const welcomeTitle = "🐂 欢迎来到赛博牛马工作站";
+            const welcomeSubtitle = "Cyber NiuMa Station - 24h 不间断打工";
+
+            stream.innerHTML = `
+                <div class="welcome-screen">
+                    <div class="welcome-icon">🏭</div>
+                    <h2 style="font-weight:700; color:#2c3e50;">${welcomeTitle}</h2>
+                    <p style="color:#7f8c8d; margin-bottom: 2rem;">${welcomeSubtitle}</p>
+
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <div class="feature-icon">⚡</div>
+                            <h3>极速搬砖</h3>
+                            <p>多线程并发，效率提升 500%</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🧠</div>
+                            <h3>赛博大脑</h3>
+                            <p>自动产生灵感，让牛马自己动</p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon">🎨</div>
+                            <h3>即时预览</h3>
+                            <p>所见即所得，拒绝无效加班</p>
+                        </div>
+                    </div>
+                </div>
+            `;
             if (centerPane) centerPane.classList.add('center-empty');
             return;
         }
@@ -720,6 +817,26 @@ class ManusUI {
                 </div>
             `;
         }).join('');
+
+        // 3. iFlow 实时预览：仅当有 pendingForKey 且无其他消息时显示“等待执行”
+        if (pendingForKey && messages.length === 0) {
+            stream.innerHTML += `
+                <div class="msg-row assistant">
+                    <div class="msg assistant">
+                        <div class="label"><i class="bi bi-robot"></i> iFlow <span class="badge">pending</span></div>
+                        <div class="msg-text">
+                            <div class="typing-indicator">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <div style="margin-top:8px; font-size:12px; color:#666;">
+                                正在召唤赛博牛马... <br>
+                                <span style="font-size:10px;opacity:0.7">当前任务 ID: ${this.escapeHtml(ideaKey)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
 
         // scroll to bottom
         stream.scrollTop = stream.scrollHeight;
@@ -952,3 +1069,60 @@ window.openPreviewTab = () => ui.openPreviewTab();
 window.setRightTab = (tab) => ui.setRightTab(tab);
 window.toggleLeftPane = () => ui.toggleLeftPane();
 window.toggleRightPane = () => ui.toggleRightPane();
+
+// ==========================================
+// 🐂 赛博牛马工作站 全局控制函数
+// ==========================================
+
+async function toggleNiuMa(appId, start) {
+    try {
+        const action = start ? 'start' : 'stop'; // 修正 logic
+        const res = await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate/${action}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            if (ui) ui.refreshNiuMaStation(); // 触发刷新
+        } else {
+            alert('操作失败: ' + (data.error || '未知错误'));
+        }
+    } catch (e) {
+        console.warn(e);
+        alert('网络错误，请检查控制台');
+    }
+}
+
+async function setNiuMaFocus(appId, dimension) {
+    try {
+        await fetch(`/api/apps/${encodeURIComponent(appId)}/auto-iterate/focus`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dimension })
+        });
+        if (ui) ui.refreshNiuMaStation();
+    } catch (e) {
+        console.warn(e);
+    }
+}
+
+async function toggleIdeaGenerator() {
+    try {
+        // 获取当前按钮状态推断动作，或者直接查 ui 状态
+        const btn = document.getElementById('toggleGeneratorBtn');
+        let action = 'start';
+        if (btn && btn.textContent.trim() === '停止') {
+            action = 'stop';
+        }
+        const res = await fetch(`/api/idea-generator/${action}`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            if (ui) ui.refreshNiuMaStation();
+        }
+    } catch (e) {
+        console.warn(e);
+    }
+}
+
+// 绑定全局变量，防止 HTML onclick 找不到
+window.toggleNiuMa = toggleNiuMa;
+window.setNiuMaFocus = setNiuMaFocus;
+window.toggleIdeaGenerator = toggleIdeaGenerator;
+
