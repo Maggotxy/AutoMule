@@ -716,7 +716,8 @@ class ManusUI {
 
     openPreviewTab() {
         if (!this.activeApp?.port) return;
-        window.open(`http://${window.location.hostname}:${this.activeApp.port}`, '_blank');
+        // 通过 Nginx 代理访问生成的应用: /app/<port>/
+        window.open(`/app/${this.activeApp.port}/`, '_blank');
     }
 
     clearInput() {
@@ -1096,7 +1097,7 @@ class ManusUI {
     buildAssistantSummary(task) {
         const app = task.app;
         const lines = [];
-        if (app?.port) lines.push(`http://${window.location.hostname}:${app.port}`);
+        if (app?.port) lines.push(`/app/${app.port}/`);
         if (task.outputFile) lines.push(`${task.outputFile}`);
         return lines.join('\n') || '已完成';
     }
@@ -1181,7 +1182,8 @@ class ManusUI {
 
         // iframe 仅在“预览”Tab激活时加载，避免占比过大/抢占布局
         if (this.rightTab === 'preview' && this.activeApp.status === 'running' && this.activeApp.port) {
-            iframe.src = `http://${window.location.hostname}:${this.activeApp.port}`;
+            // 通过 Nginx 代理加载预览: /app/<port>/
+            iframe.src = `/app/${this.activeApp.port}/`;
         } else {
             iframe.removeAttribute('src');
         }
