@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -356,8 +357,13 @@
         }
 
         @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Modal styles */
@@ -432,6 +438,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -493,6 +500,57 @@
             </div>
         </div>
 
+        <!-- 🐂 NiuMa 工作统计面板 -->
+        <div id="niuMaStatsPanel" class="stats-bar" style="margin-bottom: 20px;">
+            <div class="stat-item">
+                <div class="stat-icon" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c;">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-label">总工作时间</div>
+                    <div class="stat-value" id="totalWorkTime">0h</div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon" style="background: rgba(46, 204, 113, 0.15); color: #2ecc71;">
+                    <i class="bi bi-people"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-label">牛马数量</div>
+                    <div class="stat-value" id="niuMaCount">0</div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon" style="background: rgba(241, 196, 15, 0.15); color: #f39c12;">
+                    <i class="bi bi-fire"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-label">干活中</div>
+                    <div class="stat-value" id="workingNiuMa">0</div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon" style="background: rgba(155, 89, 182, 0.15); color: #9b59b6;">
+                    <i class="bi bi-lightning"></i>
+                </div>
+                <div class="stat-info">
+                    <div class="stat-label">总迭代</div>
+                    <div class="stat-value" id="totalIterations">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 牛马详情表格 -->
+        <div id="niuMaDetails" class="stats-bar" style="margin-bottom: 20px; display: block; padding: 16px;">
+            <h3
+                style="margin: 0 0 12px 0; font-size: 14px; color: #2c3e50; display: flex; align-items: center; gap: 8px;">
+                <i class="bi bi-bar-chart"></i> 牛马工作明细
+            </h3>
+            <div id="niuMaTable" style="font-size: 13px;">
+                <div style="color: rgba(0,0,0,0.5);">加载中...</div>
+            </div>
+        </div>
+
         <!-- Ideas Grid -->
         <div id="ideasGrid" class="ideas-grid">
             <div class="loading">
@@ -530,9 +588,70 @@
         // Load ideas on page load
         document.addEventListener('DOMContentLoaded', () => {
             loadIdeas();
+            loadNiuMaStats();
             // Auto refresh every 10 seconds
             setInterval(loadIdeas, 10000);
+            setInterval(loadNiuMaStats, 5000);
         });
+
+        // 加载牛马统计
+        async function loadNiuMaStats() {
+            try {
+                const res = await fetch('/api/niuma/stats');
+                const data = await res.json();
+                if (data.success) {
+                    updateNiuMaStats(data);
+                }
+            } catch (error) {
+                console.warn('加载牛马统计失败:', error);
+            }
+        }
+
+        function updateNiuMaStats(data) {
+            // 更新概览统计
+            document.getElementById('totalWorkTime').textContent = formatDuration(data.totalWorkMs || 0);
+            document.getElementById('niuMaCount').textContent = data.totalNiuma || 0;
+            document.getElementById('workingNiuMa').textContent = data.stationStats?.workingCount || 0;
+            document.getElementById('totalIterations').textContent = data.stationStats?.totalIterations || 0;
+
+            // 更新牛马明细表格
+            const tableContainer = document.getElementById('niuMaTable');
+            if (!data.stats || data.stats.length === 0) {
+                tableContainer.innerHTML = '<div style="color: rgba(0,0,0,0.5);">暂无牛马在工作</div>';
+                return;
+            }
+
+            tableContainer.innerHTML = data.stats.map(niuma => `
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(0,0,0,0.03); border-radius: 8px; margin-bottom: 6px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 16px;">${getStatusEmoji(niuma.status)}</span>
+                        <span style="font-weight: 600;">${niuma.appId.substring(0, 16)}...</span>
+                    </div>
+                    <div style="display: flex; gap: 16px; font-size: 12px; color: rgba(0,0,0,0.6);">
+                        <span>🔄 ${niuma.iterationCount}次</span>
+                        <span>⏱️ ${formatDuration(niuma.totalWorkTimeMs)}</span>
+                        <span>😴 ${formatDuration(niuma.timeSinceLastRestMs)}未休息</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusEmoji(status) {
+            switch (status) {
+                case 'working': return '🔥';
+                case 'resting': return '😴';
+                case 'paused': return '⏸️';
+                default: return '💤';
+            }
+        }
+
+        function formatDuration(ms) {
+            if (!ms || ms < 1000) return '0分';
+            const hours = Math.floor(ms / 3600000);
+            const minutes = Math.floor((ms % 3600000) / 60000);
+            if (hours > 0) return `${hours}h${minutes}m`;
+            return `${minutes}分`;
+        }
 
         async function loadIdeas() {
             try {
@@ -760,11 +879,12 @@
         }
 
         function goBack() {
-            window.close();
-            // If window.close() doesn't work (due to browser restrictions), navigate back
-            setTimeout(() => {
+            // 优先使用浏览器历史返回
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
                 window.location.href = '/';
-            }, 100);
+            }
         }
 
         function showError(message) {
@@ -849,4 +969,5 @@
         });
     </script>
 </body>
+
 </html>

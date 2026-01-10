@@ -275,6 +275,69 @@ class WebServer {
             }
         });
 
+        // 获取所有持久化想法
+        this.app.get('/api/ideas', (req, res) => {
+            try {
+                const ideas = this.system.ideaGenerator.getAllIdeas();
+                const status = this.system.ideaGenerator.getStatus();
+
+                // 统计不同来源的数量
+                const webCount = ideas.filter(i => i.source === 'web').length;
+                const aiCount = ideas.filter(i => i.source === 'ai').length;
+                const cachedCount = status.cachedIdeasCount || 0;
+
+                res.json({
+                    success: true,
+                    ideas,
+                    webCount,
+                    aiCount,
+                    cachedCount,
+                    totalCount: ideas.length
+                });
+            } catch (error) {
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        // 获取牛马工作站详细统计
+        this.app.get('/api/niuma/stats', (req, res) => {
+            try {
+                const autoIterator = this.system.iflowEngine.autoIterator;
+                if (!autoIterator) {
+                    return res.json({ success: true, stats: [], totalWorkMs: 0, totalNiuma: 0 });
+                }
+
+                const stationStats = autoIterator.getStationStats();
+                const allStates = autoIterator.getAllStates();
+
+                // 计算每个牛马的详细统计
+                const niuMaStats = allStates.map(state => ({
+                    appId: state.appId,
+                    status: state.status,
+                    iterationCount: state.iterationCount,
+                    totalWorkTimeMs: state.totalWorkTimeMs,
+                    totalRestTimeMs: state.totalRestTimeMs || 0,
+                    currentSessionMs: state.currentSessionMs || 0,
+                    timeSinceLastRestMs: state.timeSinceLastRestMs || 0,
+                    createdAt: state.createdAt,
+                    consecutiveErrors: state.consecutiveErrors || 0
+                }));
+
+                // 总工作时间
+                const totalWorkMs = niuMaStats.reduce((sum, s) => sum + s.totalWorkTimeMs, 0);
+
+                res.json({
+                    success: true,
+                    stats: niuMaStats,
+                    stationStats,
+                    totalWorkMs,
+                    totalNiuma: niuMaStats.length
+                });
+            } catch (error) {
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
         // 应用管理 API
         this.app.get('/api/apps', (req, res) => {
             try {

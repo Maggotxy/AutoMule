@@ -1468,7 +1468,7 @@ class ManusUI {
      * 打开想法详情页面
      */
     openIdeaDetails() {
-        window.open('/idea-details.html', '_blank', 'width=1200,height=800');
+        window.open('/idea-details.html', '_blank');
     }
 
     /**

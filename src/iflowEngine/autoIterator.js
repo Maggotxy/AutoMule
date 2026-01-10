@@ -40,6 +40,8 @@ class NiuMaState {
         this.lastWorkStartAt = null;
         this.currentTaskId = null; // 当前正在进行的任务ID
         this.consecutiveErrors = 0; // 连续错误次数
+        this.lastRestStartAt = null; // 上次开始休息时间
+        this.totalRestTimeMs = 0; // 累计休息时间
     }
 
     /**
@@ -98,11 +100,13 @@ class NiuMaState {
      * 开始休息
      */
     startRest() {
-        this.status = 'resting';
+        // 记录工作时间
         if (this.lastWorkStartAt) {
             this.totalWorkTimeMs += Date.now() - this.lastWorkStartAt.getTime();
             this.lastWorkStartAt = null;
         }
+        this.status = 'resting';
+        this.lastRestStartAt = new Date();
     }
 
     /**
@@ -116,6 +120,22 @@ class NiuMaState {
      * 获取状态摘要
      */
     getSummary() {
+        const now = Date.now();
+
+        // 计算当前会话时长
+        let currentSessionMs = 0;
+        if (this.status === 'working' && this.lastWorkStartAt) {
+            currentSessionMs = now - this.lastWorkStartAt.getTime();
+        }
+
+        // 计算距上次休息多久
+        let timeSinceLastRestMs = 0;
+        if (this.lastRestStartAt) {
+            timeSinceLastRestMs = now - this.lastRestStartAt.getTime();
+        } else if (this.createdAt) {
+            timeSinceLastRestMs = now - this.createdAt.getTime();
+        }
+
         return {
             appId: this.appId,
             enabled: this.enabled,
@@ -128,9 +148,13 @@ class NiuMaState {
             enabledDimensions: [...this.enabledDimensions],
             lastIterateAt: this.lastIterateAt ? this.lastIterateAt.toISOString() : null,
             createdAt: this.createdAt.toISOString(),
-            totalWorkTimeMs: this.totalWorkTimeMs,
+            totalWorkTimeMs: this.totalWorkTimeMs + currentSessionMs,
+            totalRestTimeMs: this.totalRestTimeMs,
+            currentSessionMs,
+            timeSinceLastRestMs,
             historyCount: this.history.length,
-            currentTaskId: this.currentTaskId
+            currentTaskId: this.currentTaskId,
+            consecutiveErrors: this.consecutiveErrors
         };
     }
 }

@@ -81,12 +81,85 @@ class IdeaGenerator extends EventEmitter {
         this.lastWebFetchTime = 0;
         this.webFetchInterval = 3600000; // 每小时从网络获取一次
 
+        // 持久化存储
+        this.ideasDataDir = path.join(__dirname, '../data');
+        this.ideasDataFile = path.join(this.ideasDataDir, 'ideas.json');
+        this.allIdeas = []; // 所有生成的想法（持久化）
+        this.loadIdeas(); // 启动时加载
+
         logger.info('🤖 想法生成器初始化', {
             enabled: this.config.enabled,
             intervalMs: this.intervalMs,
             maxIdeasPerDay: this.maxIdeasPerDay,
-            sources: this.config.sources
+            sources: this.config.sources,
+            persistentIdeas: this.allIdeas.length
         });
+    }
+
+    /**
+     * 加载持久化的想法
+     */
+    loadIdeas() {
+        try {
+            if (fs.existsSync(this.ideasDataFile)) {
+                const data = JSON.parse(fs.readFileSync(this.ideasDataFile, 'utf-8'));
+                this.allIdeas = data.ideas || [];
+                logger.info('📂 加载持久化想法', { count: this.allIdeas.length });
+            }
+        } catch (error) {
+            logger.warn('📂 加载想法失败，将使用空列表', { error: error.message });
+            this.allIdeas = [];
+        }
+    }
+
+    /**
+     * 保存想法到文件
+     */
+    saveIdeas() {
+        try {
+            if (!fs.existsSync(this.ideasDataDir)) {
+                fs.mkdirSync(this.ideasDataDir, { recursive: true });
+            }
+            const data = {
+                ideas: this.allIdeas,
+                lastUpdated: new Date().toISOString(),
+                totalCount: this.allIdeas.length
+            };
+            fs.writeFileSync(this.ideasDataFile, JSON.stringify(data, null, 2), 'utf-8');
+        } catch (error) {
+            logger.error('📂 保存想法失败', { error: error.message });
+        }
+    }
+
+    /**
+     * 添加一个想法到持久化存储
+     */
+    addIdea(content, source = 'unknown', analysis = null) {
+        const idea = {
+            id: `idea_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            content,
+            source,
+            analysis,
+            timestamp: Date.now(),
+            used: false,
+            createdAt: new Date().toISOString()
+        };
+        this.allIdeas.unshift(idea); // 最新的在前
+
+        // 限制最多保留 500 条
+        if (this.allIdeas.length > 500) {
+            this.allIdeas = this.allIdeas.slice(0, 500);
+        }
+
+        this.saveIdeas();
+        return idea;
+    }
+
+    /**
+     * 获取所有持久化的想法
+     */
+    getAllIdeas() {
+        return this.allIdeas;
     }
 
     /**
@@ -449,7 +522,7 @@ class IdeaGenerator extends EventEmitter {
     /**
      * 创建新牛马（写入 ideas 目录）
      */
-    async spawnNiuMa(ideaContent) {
+    async spawnNiuMa(ideaContent, source = 'unknown', analysis = null) {
         // 确保目录存在
         if (!fs.existsSync(this.ideasDir)) {
             fs.mkdirSync(this.ideasDir, { recursive: true });
@@ -470,9 +543,12 @@ class IdeaGenerator extends EventEmitter {
 
         fs.writeFileSync(filePath, content, 'utf-8');
 
-        logger.info('🤖 创建想法文件', { fileName, filePath });
+        // 持久化到 ideas.json
+        const persistedIdea = this.addIdea(ideaContent, source, analysis);
 
-        return { fileName, filePath };
+        logger.info('🤖 创建想法文件', { fileName, filePath, ideaId: persistedIdea.id });
+
+        return { fileName, filePath, idea: persistedIdea };
     }
 
     /**
