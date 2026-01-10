@@ -716,7 +716,7 @@ class ManusUI {
 
     openPreviewTab() {
         if (!this.activeApp?.port) return;
-        window.open(`http://localhost:${this.activeApp.port}`, '_blank');
+        window.open(`http://${window.location.hostname}:${this.activeApp.port}`, '_blank');
     }
 
     clearInput() {
@@ -1096,7 +1096,7 @@ class ManusUI {
     buildAssistantSummary(task) {
         const app = task.app;
         const lines = [];
-        if (app?.port) lines.push(`http://localhost:${app.port}`);
+        if (app?.port) lines.push(`http://${window.location.hostname}:${app.port}`);
         if (task.outputFile) lines.push(`${task.outputFile}`);
         return lines.join('\n') || '已完成';
     }
@@ -1181,7 +1181,7 @@ class ManusUI {
 
         // iframe 仅在“预览”Tab激活时加载，避免占比过大/抢占布局
         if (this.rightTab === 'preview' && this.activeApp.status === 'running' && this.activeApp.port) {
-            iframe.src = `http://localhost:${this.activeApp.port}`;
+            iframe.src = `http://${window.location.hostname}:${this.activeApp.port}`;
         } else {
             iframe.removeAttribute('src');
         }
