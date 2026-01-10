@@ -1,0 +1,18 @@
+{
+  "id": "app_1768051560638",
+  "name": "未命名应用",
+  "type": "default",
+  "port": 3007,
+  "status": "stopped",
+  "createdAt": "2026-01-10T13:26:00.640Z",
+  "ideaKey": "C:\\CDevelopment\\iflow\\ideas\\idea_web_1768051537465.txt",
+  "ideaHistory": [
+    {
+      "revision": 1,
+      "timestamp": "2026-01-10T13:26:00.639Z",
+      "text": "给我做个md风格 配色高级 白灰黑配色 博客 高级像素风"
+    }
+  ],
+  "lastRevision": 1,
+  "lastPreparedAt": "2026-01-10T13:26:00.639Z"
+}

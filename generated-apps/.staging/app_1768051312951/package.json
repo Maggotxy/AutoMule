@@ -1,0 +1,15 @@
+{
+  "name": "quality-tracker",
+  "version": "1.0.0",
+  "description": "工作质量追踪器 - 提高日常工作效率与质量的自动化工具",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

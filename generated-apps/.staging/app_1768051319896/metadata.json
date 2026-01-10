@@ -1,0 +1,18 @@
+{
+  "id": "app_1768051319896",
+  "name": "未命名应用",
+  "type": "default",
+  "port": 3003,
+  "status": "stopped",
+  "createdAt": "2026-01-10T13:21:59.897Z",
+  "ideaKey": "C:\\CDevelopment\\iflow\\ideas\\auto_1768051313475.txt",
+  "ideaHistory": [
+    {
+      "revision": 1,
+      "timestamp": "2026-01-10T13:21:59.897Z",
+      "text": "创建一个基于计算机视觉的API 服务，用于简化流程，基于当前技术趋势，生成一个创新的 Web 应用想法\n\n【自动生成】\n此想法由赛博牛马工作站自动生成\n生成时间：2026/1/10 21:21:53"
+    }
+  ],
+  "lastRevision": 1,
+  "lastPreparedAt": "2026-01-10T13:21:59.897Z"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "smart-experience-enhancer",
+  "version": "1.0.0",
+  "description": "智能体验增强演示应用",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

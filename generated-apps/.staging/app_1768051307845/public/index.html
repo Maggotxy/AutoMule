@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体验增强演示</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧠 智能体验增强演示</h1>
+            <p class="subtitle">基于机器学习的用户体验增强技术展示</p>
+        </header>
+
+        <main>
+            <section class="feature-section">
+                <h2>✨ 智能内容分析</h2>
+                <p>输入任意文本，体验基于机器学习的实时内容分析</p>
+                
+                <div class="input-group">
+                    <textarea id="textInput" placeholder="请输入要分析的文本内容..."></textarea>
+                    <button id="analyzeBtn" class="btn-primary">开始分析</button>
+                </div>
+                
+                <div id="analysisResult" class="result-box hidden">
+                    <div class="result-header">
+                        <span class="score-label">综合评分</span>
+                        <span id="scoreValue" class="score-value">--</span>
+                    </div>
+                    <div id="insightsList" class="insights-list"></div>
+                </div>
+            </section>
+
+            <section class="feature-section">
+                <h2>📊 用户行为预测</h2>
+                <p>模拟浏览器插件的用户行为分析和智能推荐</p>
+                
+                <div class="behavior-demo">
+                    <div class="demo-area" id="demoArea">
+                        <p>在此区域进行操作（点击、悬停、滚动）</p>
+                    </div>
+                    
+                    <div id="behaviorLog" class="behavior-log">
+                        <h3>行为记录</h3>
+                        <div id="logList" class="log-list"></div>
+                    </div>
+                    
+                    <div id="recommendationBox" class="recommendation-box hidden">
+                        <h3>💡 智能推荐</h3>
+                        <p id="recommendationText"></p>
+                        <p class="next-actions">
+                            <strong>预测下一步：</strong>
+                            <span id="nextActions"></span>
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="feature-section">
+                <h2>🎯 功能特点</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">🔍</div>
+                        <h3>情感分析</h3>
+                        <p>实时识别文本情感倾向</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📝</div>
+                        <h3>关键词提取</h3>
+                        <p>智能提取核心关键词</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎭</div>
+                        <h3>行为预测</h3>
+                        <p>预测用户下一步操作</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">💡</div>
+                        <h3>智能推荐</h3>
+                        <p>基于上下文的个性化建议</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>演示应用 | 模拟机器学习增强体验</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

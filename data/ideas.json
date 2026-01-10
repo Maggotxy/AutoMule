@@ -1,0 +1,42 @@
+{
+  "ideas": [
+    {
+      "id": "idea_1768051315913_sl4mg0nga",
+      "content": "创建一个基于自动化的移动应用，用于简化流程，构建一个提升工作效率的生产力工具",
+      "source": "unknown",
+      "analysis": null,
+      "timestamp": 1768051315913,
+      "used": false,
+      "createdAt": "2026-01-10T13:21:55.913Z"
+    },
+    {
+      "id": "idea_1768051313475_ntmh7uoot",
+      "content": "创建一个基于计算机视觉的API 服务，用于简化流程，基于当前技术趋势，生成一个创新的 Web 应用想法",
+      "source": "unknown",
+      "analysis": null,
+      "timestamp": 1768051313475,
+      "used": false,
+      "createdAt": "2026-01-10T13:21:53.475Z"
+    },
+    {
+      "id": "idea_1768051306837_dk1pzej30",
+      "content": "创建一个基于自动化的桌面应用，用于提高质量，想象一个解决日常痛点的实用工具",
+      "source": "unknown",
+      "analysis": null,
+      "timestamp": 1768051306837,
+      "used": false,
+      "createdAt": "2026-01-10T13:21:46.837Z"
+    },
+    {
+      "id": "idea_1768051301126_cbzbp8dp5",
+      "content": "创建一个基于机器学习的浏览器插件，用于增强体验，基于当前技术趋势，生成一个创新的 Web 应用想法",
+      "source": "unknown",
+      "analysis": null,
+      "timestamp": 1768051301126,
+      "used": false,
+      "createdAt": "2026-01-10T13:21:41.126Z"
+    }
+  ],
+  "lastUpdated": "2026-01-10T13:21:55.913Z",
+  "totalCount": 4
+}

@@ -1,0 +1,18 @@
+{
+  "id": "app_1768051307845",
+  "name": "智能体验增强演示",
+  "type": "demo",
+  "port": 3001,
+  "status": "stopped",
+  "createdAt": "2026-01-10T13:21:47.847Z",
+  "ideaKey": "C:\\CDevelopment\\iflow\\ideas\\auto_1768051301113.txt",
+  "ideaHistory": [
+    {
+      "revision": 1,
+      "timestamp": "2026-01-10T13:21:47.847Z",
+      "text": "创建一个基于机器学习的浏览器插件，用于增强体验，基于当前技术趋势，生成一个创新的 Web 应用想法\n\n【自动生成】\n此想法由赛博牛马工作站自动生成\n生成时间：2026/1/10 21:21:41"
+    }
+  ],
+  "lastRevision": 1,
+  "lastPreparedAt": "2026-01-10T13:21:47.847Z"
+}
