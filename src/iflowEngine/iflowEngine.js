@@ -139,9 +139,14 @@ class iFlowEngine extends EventEmitter {
 
     logger.info('检测到 iFlow ACP 未运行，尝试启动 iflow CLI', { port });
 
-    // 用 cmd.exe 启动，避免 Windows 下直接 spawn 可执行文件解析失败
-    const args = ['/c', 'iflow', '--experimental-acp', '--port', String(port)];
-    const child = spawn('cmd', args, {
+    // 跨平台: Linux 使用 sh -c, Windows 使用 cmd /c
+    const isWindows = process.platform === 'win32';
+    const shell = isWindows ? 'cmd' : 'sh';
+    const shellArgs = isWindows
+      ? ['/c', 'iflow', '--experimental-acp', '--port', String(port)]
+      : ['-c', `iflow --experimental-acp --port ${port}`];
+
+    const child = spawn(shell, shellArgs, {
       stdio: 'pipe',
       windowsHide: true
     });

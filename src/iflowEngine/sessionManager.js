@@ -184,8 +184,14 @@ class SessionManager {
     async startIFlowProcess(port) {
         logger.info('启动新的 iFlow 进程', { port });
 
-        const args = ['/c', 'iflow', '--experimental-acp', '--port', String(port)];
-        const child = spawn('cmd', args, {
+        // 跨平台: Linux 使用 sh -c, Windows 使用 cmd /c
+        const isWindows = process.platform === 'win32';
+        const shell = isWindows ? 'cmd' : 'sh';
+        const shellArgs = isWindows
+            ? ['/c', 'iflow', '--experimental-acp', '--port', String(port)]
+            : ['-c', `iflow --experimental-acp --port ${port}`];
+
+        const child = spawn(shell, shellArgs, {
             stdio: 'pipe',
             windowsHide: true
         });
