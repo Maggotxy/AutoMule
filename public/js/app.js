@@ -314,6 +314,19 @@ class ManusUI {
     }
 
     /**
+     * 获取预览 URL（自动检测环境）
+     * 本地开发: http://localhost:PORT
+     * 生产环境: /app/PORT/ (通过 Nginx 代理)
+     */
+    getPreviewUrl(port) {
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocalhost) {
+            return `http://localhost:${port}`;
+        }
+        return `/app/${port}/`;
+    }
+
+    /**
      * 显示 Toast 通知
      * @param {string} message - 消息内容
      * @param {string} type - 类型: 'info' | 'success' | 'warning' | 'error'
@@ -716,8 +729,8 @@ class ManusUI {
 
     openPreviewTab() {
         if (!this.activeApp?.port) return;
-        // 通过 Nginx 代理访问生成的应用: /app/<port>/
-        window.open(`/app/${this.activeApp.port}/`, '_blank');
+        // 自动检测环境：本地用端口，生产用代理
+        window.open(this.getPreviewUrl(this.activeApp.port), '_blank');
     }
 
     clearInput() {
@@ -1097,7 +1110,7 @@ class ManusUI {
     buildAssistantSummary(task) {
         const app = task.app;
         const lines = [];
-        if (app?.port) lines.push(`/app/${app.port}/`);
+        if (app?.port) lines.push(this.getPreviewUrl(app.port));
         if (task.outputFile) lines.push(`${task.outputFile}`);
         return lines.join('\n') || '已完成';
     }
@@ -1182,8 +1195,8 @@ class ManusUI {
 
         // iframe 仅在“预览”Tab激活时加载，避免占比过大/抢占布局
         if (this.rightTab === 'preview' && this.activeApp.status === 'running' && this.activeApp.port) {
-            // 通过 Nginx 代理加载预览: /app/<port>/
-            iframe.src = `/app/${this.activeApp.port}/`;
+            // 自动检测环境：本地用端口，生产用代理
+            iframe.src = this.getPreviewUrl(this.activeApp.port);
         } else {
             iframe.removeAttribute('src');
         }

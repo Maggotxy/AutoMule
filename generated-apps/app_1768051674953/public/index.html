@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能待办助手</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📋 智能待办助手</h1>
+      <p class="subtitle">高效管理您的日常任务</p>
+    </header>
+
+    <div class="add-task-section">
+      <input type="text" id="taskInput" placeholder="输入新任务..." maxlength="100">
+      <select id="prioritySelect">
+        <option value="low">低优先级</option>
+        <option value="medium" selected>中优先级</option>
+        <option value="high">高优先级</option>
+      </select>
+      <input type="date" id="dueDateInput">
+      <button id="addTaskBtn">添加任务</button>
+    </div>
+
+    <div class="filter-section">
+      <button class="filter-btn active" data-filter="all">全部</button>
+      <button class="filter-btn" data-filter="pending">待办</button>
+      <button class="filter-btn" data-filter="completed">已完成</button>
+      <button class="filter-btn" data-filter="high">高优先级</button>
+    </div>
+
+    <div class="stats-section">
+      <div class="stat-item">
+        <span class="stat-number" id="totalTasks">0</span>
+        <span class="stat-label">总任务</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number" id="pendingTasks">0</span>
+        <span class="stat-label">待办</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-number" id="completedTasks">0</span>
+        <span class="stat-label">已完成</span>
+      </div>
+    </div>
+
+    <ul id="taskList" class="task-list"></ul>
+
+    <div class="actions-section">
+      <button id="clearCompletedBtn" class="secondary-btn">清除已完成</button>
+      <button id="clearAllBtn" class="danger-btn">清空全部</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

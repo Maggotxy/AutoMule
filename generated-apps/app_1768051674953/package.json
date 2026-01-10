@@ -1,7 +1,7 @@
 {
-  "name": "smart-experience-enhancer",
+  "name": "smart-todo-helper",
   "version": "1.0.0",
-  "description": "智能体验增强演示应用",
+  "description": "智能待办助手 - 提高日常任务管理效率",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
