@@ -126,6 +126,10 @@ pm2 startup
 - 📖 [项目文档](https://sivitacraft.feishu.cn/wiki/CLXKwvRkjiBtXSkvvT2c2WNXnLd)
 - 💬 [联系作者](https://sivitacraft.feishu.cn/wiki/CLXKwvRkjiBtXSkvvT2c2WNXnLd)
 
+### 微信交流群
+
+<img src="docs/wechat.jpg" width="200" alt="微信群二维码">
+
 ---
 
 ## 📄 开源协议

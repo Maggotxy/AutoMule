@@ -209,11 +209,11 @@ class AutoIterator extends EventEmitter {
     }
 
     /**
-     * 监控并重置卡死的牛马（超过15分钟未完成）
+     * 监控并重置卡死的牛马（超过10分钟未完成，与 iFlow timeout 配置一致）
      */
     checkZombies() {
         const now = Date.now();
-        const TIMEOUT_MS = 15 * 60 * 1000;
+        const TIMEOUT_MS = 10 * 60 * 1000;
 
         for (const state of this.states.values()) {
             if (state.status === 'working' && state.lastWorkStartAt) {
