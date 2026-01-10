@@ -1,0 +1,18 @@
+{
+  "id": "app_1768053118999",
+  "name": "AI课程介绍页",
+  "type": "course-landing",
+  "port": 3001,
+  "status": "stopped",
+  "createdAt": "2026-01-10T13:51:59.000Z",
+  "ideaKey": "C:\\CDevelopment\\iflow\\ideas\\idea_web_1768053109216.txt",
+  "ideaHistory": [
+    {
+      "revision": 1,
+      "timestamp": "2026-01-10T13:51:59.000Z",
+      "text": "写一个ai课程的介绍页"
+    }
+  ],
+  "lastRevision": 1,
+  "lastPreparedAt": "2026-01-10T13:51:59.000Z"
+}

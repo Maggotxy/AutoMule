@@ -1,0 +1,15 @@
+{
+  "name": "ai-course-intro",
+  "version": "1.0.0",
+  "description": "AI课程介绍页",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

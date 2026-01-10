@@ -1,0 +1,18 @@
+{
+  "id": "app_1768053834850",
+  "name": "未命名应用",
+  "type": "default",
+  "port": 3002,
+  "status": "stopped",
+  "createdAt": "2026-01-10T14:03:54.851Z",
+  "ideaKey": "C:\\CDevelopment\\iflow\\ideas\\idea_web_1768053827258.txt",
+  "ideaHistory": [
+    {
+      "revision": 1,
+      "timestamp": "2026-01-10T14:03:54.851Z",
+      "text": "写一个ai课程的介绍页"
+    }
+  ],
+  "lastRevision": 1,
+  "lastPreparedAt": "2026-01-10T14:03:54.851Z"
+}
