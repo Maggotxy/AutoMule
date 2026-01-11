@@ -325,22 +325,44 @@ class iFlowEngine extends EventEmitter {
     const root = this.ensureStagingRoot();
     const dirName = `${appId}`;
     const stagingDir = path.join(root, dirName);
-    // 复用同一 staging 目录：避免 .staging 持续堆积；若上次异常遗留则直接清理
-    try {
-      if (fs.existsSync(stagingDir)) {
-        logger.info('清理旧的 staging 目录', { stagingDir });
-        fs.rmSync(stagingDir, { recursive: true, force: true });
+
+    // 尝试清理旧的 staging 目录，带重试逻辑处理 Windows 文件锁
+    const maxRetries = 3;
+    const retryDelayMs = 1000;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        if (fs.existsSync(stagingDir)) {
+          logger.info('清理旧的 staging 目录', { stagingDir, attempt });
+          fs.rmSync(stagingDir, { recursive: true, force: true });
+        }
+        // 清理成功，创建新目录
+        return this.createStagingDirInternal(stagingDir);
+      } catch (error) {
+        const isFileLock = error.code === 'EBUSY' || error.code === 'EPERM';
+        if (isFileLock && attempt < maxRetries) {
+          logger.warn('清理 staging 目录遇到文件锁，等待重试', {
+            stagingDir,
+            attempt,
+            maxRetries,
+            error: error.message
+          });
+          // 同步等待后重试
+          this.sleepSync(retryDelayMs);
+        } else if (attempt === maxRetries) {
+          logger.warn('清理旧 staging 目录失败，使用备用目录', {
+            stagingDir,
+            error: error.message
+          });
+          // 最后一次尝试失败，使用带时间戳的备用目录
+          const fallbackDir = path.join(root, `${appId}_${Date.now()}`);
+          logger.info('使用备用 staging 目录', { fallbackDir });
+          return this.createStagingDirInternal(fallbackDir);
+        }
       }
-    } catch (error) {
-      logger.warn('清理旧 staging 目录失败', {
-        stagingDir,
-        error: error.message
-      });
-      // 如果清理失败，尝试使用带时间戳的目录名避免冲突
-      const fallbackDir = path.join(root, `${appId}_${Date.now()}`);
-      logger.info('使用备用 staging 目录', { fallbackDir });
-      return this.createStagingDirInternal(fallbackDir);
     }
+
+    // 不应该到达这里，但为了安全起见
     return this.createStagingDirInternal(stagingDir);
   }
 
