@@ -561,6 +561,109 @@ class WebServer {
             }
         });
 
+        // ========== 日志查看 API ==========
+
+        // 获取系统日志文件列表
+        this.app.get('/api/logs', (req, res) => {
+            try {
+                const logsDir = path.join(__dirname, '../logs');
+                if (!fs.existsSync(logsDir)) {
+                    return res.json({ success: true, logs: [] });
+                }
+
+                const files = fs.readdirSync(logsDir)
+                    .filter(f => f.endsWith('.log') || f.endsWith('.md'))
+                    .map(f => {
+                        const stat = fs.statSync(path.join(logsDir, f));
+                        return {
+                            name: f,
+                            size: stat.size,
+                            modifiedAt: stat.mtime.toISOString()
+                        };
+                    })
+                    .sort((a, b) => new Date(b.modifiedAt) - new Date(a.modifiedAt));
+
+                res.json({ success: true, logs: files });
+            } catch (error) {
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        // 获取指定日志文件内容（支持分页）
+        this.app.get('/api/logs/:filename', (req, res) => {
+            try {
+                const { filename } = req.params;
+                const lines = parseInt(req.query.lines) || 100;
+
+                // 安全检查
+                if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+                    return res.status(400).json({ success: false, error: '非法文件名' });
+                }
+
+                const logsDir = path.join(__dirname, '../logs');
+                const filePath = path.join(logsDir, filename);
+
+                if (!fs.existsSync(filePath)) {
+                    return res.status(404).json({ success: false, error: '日志文件不存在' });
+                }
+
+                const content = fs.readFileSync(filePath, 'utf-8');
+                const allLines = content.split('\n');
+                const tailLines = allLines.slice(-lines);
+
+                res.json({
+                    success: true,
+                    filename,
+                    totalLines: allLines.length,
+                    lines: tailLines.length,
+                    content: tailLines.join('\n')
+                });
+            } catch (error) {
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
+        // ========== 应用管理增强 API ==========
+
+        // 删除应用（停止并删除目录）
+        this.app.delete('/api/apps/:appId', async (req, res) => {
+            try {
+                const { appId } = req.params;
+                const appDir = path.join(__dirname, '../generated-apps', appId);
+
+                // 检查应用是否存在
+                if (!fs.existsSync(appDir)) {
+                    return res.status(404).json({ success: false, error: '应用不存在' });
+                }
+
+                // 先停止应用
+                try {
+                    await this.system.iflowEngine.stopApp(appId);
+                } catch (e) {
+                    // 应用可能已经停止，忽略错误
+                }
+
+                // 删除目录
+                fs.rmSync(appDir, { recursive: true, force: true });
+
+                // 清理相关映射
+                const engine = this.system.iflowEngine;
+                engine.activeApps.delete(appId);
+
+                // 清理 ideaKeyToAppId 映射
+                for (const [key, id] of engine.ideaKeyToAppId) {
+                    if (id === appId) {
+                        engine.ideaKeyToAppId.delete(key);
+                        break;
+                    }
+                }
+
+                res.json({ success: true, appId, message: '应用已删除' });
+            } catch (error) {
+                res.status(500).json({ success: false, error: error.message });
+            }
+        });
+
         // ========== 自动迭代 API（赛博牛马）==========
 
         // 获取自动迭代配置和所有状态
